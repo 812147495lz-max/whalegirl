@@ -1,0 +1,16 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "whalegirl-codex-events",
+  "version": "0.2.0",
+  "description": "Sends privacy-filtered Codex lifecycle state to the local WhaleGirl app.",
+  "license": "MIT",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "WhaleGirl Codex Events",
+        "shortDescription": "Local lifecycle notifications for WhaleGirl",
+        "developerName": "WhaleGirl"
+      }
+    }
+  }
+}

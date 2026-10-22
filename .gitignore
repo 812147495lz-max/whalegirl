@@ -1,0 +1,21 @@
+.DS_Store
+.build/
+Packages/WhaleCore/.build/
+DerivedData/
+*.xcresult
+build/*.app/
+evidence/*.xcresult/
+/work/community-assets/
+/work/style-review/
+
+# Local release outputs and asset import workspaces are not source code.
+/build/
+/work/
+
+__pycache__/
+*.py[cod]
+xcuserdata/
+*.dmg
+*.zip
+.env
+.env.*

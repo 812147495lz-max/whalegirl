@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "runtimeDependencies": [],
+  "localPackages": [
+    {
+      "name": "WhaleCore",
+      "path": "Packages/WhaleCore",
+      "kind": "first-party"
+    }
+  ],
+  "systemFrameworks": [
+    "AppKit",
+    "Foundation",
+    "QuartzCore",
+    "OSLog"
+  ],
+  "researchedButNotIntegrated": [
+    {
+      "name": "AgentPet",
+      "revision": null,
+      "license": null,
+      "status": "not present in supplied kit; not integrated"
+    },
+    {
+      "name": "RunRat",
+      "revision": null,
+      "license": null,
+      "status": "not present in supplied kit; not integrated"
+    },
+    {
+      "name": "DSH Pet",
+      "revision": null,
+      "license": null,
+      "status": "not present in supplied kit; not integrated"
+    }
+  ],
+  "assetDependencies": [
+    {
+      "name": "vlln/whale-girl",
+      "url": "https://github.com/vlln/whale-girl",
+      "revision": "9c32d7a39a45148076f8ad2fdaad2dc2420eedb3",
+      "license": "MIT",
+      "licenseSha256": "c54724c121bf852962c289ad21462be8148e16d47ded3e39051dcb21c268598d",
+      "characterCredit": "ZipZipPipe",
+      "usage": "five upstream PNG sprite sheets, copied without pixel modification and referenced by the local manifest"
+    }
+  ]
+}

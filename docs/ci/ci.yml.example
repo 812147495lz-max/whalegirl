@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  core-and-app-build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test WhaleCore
+        run: swift test --package-path Packages/WhaleCore --scratch-path "$RUNNER_TEMP/WhaleCore" -j 4
+      - name: Build arm64 app without signing
+        run: >-
+          xcodebuild
+          -project WhaleGirl.xcodeproj
+          -scheme WhaleGirl
+          -configuration Debug
+          -derivedDataPath "$RUNNER_TEMP/WhaleGirl"
+          ARCHS=arm64
+          ONLY_ACTIVE_ARCH=NO
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+  app-tests-arm64:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run host application tests
+        run: >-
+          xcodebuild
+          -project WhaleGirl.xcodeproj
+          -scheme WhaleGirl
+          -configuration Debug
+          -derivedDataPath "$RUNNER_TEMP/WhaleGirlTests"
+          CODE_SIGNING_ALLOWED=NO
+          test

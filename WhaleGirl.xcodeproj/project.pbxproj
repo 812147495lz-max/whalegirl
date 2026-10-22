@@ -1,0 +1,250 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B00000000000000000000001 /* WhaleGirlMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000010 /* WhaleGirlMain.swift */; };
+		B00000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* AppDelegate.swift */; };
+		B00000000000000000000003 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* AppCoordinator.swift */; };
+		B00000000000000000000004 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* MenuBarController.swift */; };
+		B00000000000000000000005 /* SpriteRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* SpriteRepository.swift */; };
+		B00000000000000000000006 /* SpriteAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* SpriteAnimator.swift */; };
+		B00000000000000000000007 /* HitRegionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* HitRegionView.swift */; };
+		B00000000000000000000008 /* PetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* PetView.swift */; };
+		B00000000000000000000009 /* OverlayPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000018 /* OverlayPanelController.swift */; };
+		B0000000000000000000000A /* PeekPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000019 /* PeekPanelController.swift */; };
+		B0000000000000000000000B /* RoamPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001A /* RoamPanelController.swift */; };
+		B0000000000000000000000C /* DashboardWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001C /* DashboardWindowController.swift */; };
+		B0000000000000000000000D /* SystemMetricsSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001D /* SystemMetricsSampler.swift */; };
+		B0000000000000000000000E /* EventStateStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000001E /* EventStateStore.swift */; };
+		B00000000000000000000010 /* UserNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000031 /* UserNotificationService.swift */; };
+		B00000000000000000000011 /* LaunchAtLoginService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000032 /* LaunchAtLoginService.swift */; };
+		B00000000000000000000020 /* sprite-manifest.json in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000020 /* sprite-manifest.json */; };
+		B00000000000000000000021 /* mini-atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000021 /* mini-atlas.png */; };
+		B00000000000000000000022 /* peek-atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000022 /* peek-atlas.png */; };
+		B00000000000000000000023 /* full-atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000023 /* full-atlas.png */; };
+		B00000000000000000000024 /* attribution.json in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000024 /* attribution.json */; };
+		B00000000000000000000025 /* joy-atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000025 /* joy-atlas.png */; };
+		B00000000000000000000026 /* drag-atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000026 /* drag-atlas.png */; };
+		B00000000000000000000027 /* error-atlas.png in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000027 /* error-atlas.png */; };
+		B00000000000000000000028 /* whale-girl-MIT.txt in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000028 /* whale-girl-MIT.txt */; };
+		B00000000000000000000029 /* NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000029 /* NOTICE.md */; };
+		B00000000000000000000030 /* WhaleGirlAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000030 /* WhaleGirlAppTests.swift */; };
+		B00000000000000000000050 /* MenuBarFrames in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000050 /* MenuBarFrames */; };
+		B00000000000000000000051 /* HoverAnimations in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000051 /* HoverAnimations */; };
+		B00000000000000000000052 /* DeepSeekChanDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000052 /* DeepSeekChanDialog.swift */; };
+		B00000000000000000000053 /* CommunityActions in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000053 /* CommunityActions */; };
+		B00000000000000000000040 /* WhaleCore in Frameworks */ = {isa = PBXBuildFile; productRef = P00000000000000000000002 /* WhaleCore */; };
+		B00000000000000000000041 /* WhaleCore in Frameworks */ = {isa = PBXBuildFile; productRef = P00000000000000000000003 /* WhaleCore */; };
+		B00000000000000000000054 /* MenuBarInformationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000054; };
+		B00000000000000000000055 /* ClickAnimations in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000055; };
+		B00000000000000000000056 /* AIMonitorStore.swift */ = {isa = PBXBuildFile; fileRef = F00000000000000000000056; };
+		B00000000000000000000057 /* AIMonitorViews.swift */ = {isa = PBXBuildFile; fileRef = F00000000000000000000057; };
+		B00000000000000000000058 /* AgentCompanionController.swift */ = {isa = PBXBuildFile; fileRef = F00000000000000000000058; };
+		B00000000000000000000059 /* AIMonitor */ = {isa = PBXBuildFile; fileRef = F00000000000000000000059; };
+		B00000000000000000000060 /* NativeAppQuotaReader */ = {isa = PBXBuildFile; fileRef = F00000000000000000000060; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		X00000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A00000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T00000000000000000000001;
+			remoteInfo = WhaleGirl;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		F00000000000000000000001 /* WhaleGirl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WhaleGirl.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000002 /* WhaleGirlTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WhaleGirlTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000010 /* WhaleGirlMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/App/WhaleGirlMain.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000011 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/App/AppDelegate.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000012 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/App/AppCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000013 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/MenuBar/MenuBarController.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000014 /* SpriteRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Sprite/SpriteRepository.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000015 /* SpriteAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Sprite/SpriteAnimator.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000016 /* HitRegionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Interaction/HitRegionView.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000017 /* PetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Interaction/PetView.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000018 /* OverlayPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Overlay/OverlayPanelController.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000019 /* PeekPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Overlay/PeekPanelController.swift; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000001A /* RoamPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Overlay/RoamPanelController.swift; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000001B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Apps/macOS/Info.plist; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000001C /* DashboardWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Dashboard/DashboardWindowController.swift; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000001D /* SystemMetricsSampler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/SystemMetricsSampler.swift; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000001E /* EventStateStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Events/EventStateStore.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000031 /* UserNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Notifications/UserNotificationService.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000032 /* LaunchAtLoginService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Settings/LaunchAtLoginService.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000020 /* sprite-manifest.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Apps/macOS/Resources/Sprites/sprite-manifest.json; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000021 /* mini-atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Apps/macOS/Resources/Sprites/mini-atlas.png; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000022 /* peek-atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Apps/macOS/Resources/Sprites/peek-atlas.png; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000023 /* full-atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Apps/macOS/Resources/Sprites/full-atlas.png; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000024 /* attribution.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Assets/attribution.json; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000025 /* joy-atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Apps/macOS/Resources/Sprites/joy-atlas.png; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000026 /* drag-atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Apps/macOS/Resources/Sprites/drag-atlas.png; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000027 /* error-atlas.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Apps/macOS/Resources/Sprites/error-atlas.png; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000028 /* whale-girl-MIT.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = licenses/whale-girl-MIT.txt; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000029 /* NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = licenses/NOTICE.md; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000030 /* WhaleGirlAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/WhaleGirlTests/WhaleGirlAppTests.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000050 /* MenuBarFrames */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Apps/macOS/Resources/MenuBarFrames; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000051 /* HoverAnimations */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Apps/macOS/Resources/HoverAnimations; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000052 /* DeepSeekChanDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/MenuBar/DeepSeekChanDialog.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000053 /* CommunityActions */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Apps/macOS/Resources/CommunityActions; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000054 /* MenuBarInformationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/MenuBar/MenuBarInformationController.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000055 /* ClickAnimations */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Apps/macOS/Resources/ClickAnimations; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000056 /* AIMonitorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/AIMonitorStore.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000057 /* AIMonitorViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/MenuBar/AIMonitorViews.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000058 /* AgentCompanionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Events/AgentCompanionController.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000059 /* AIMonitor */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Apps/macOS/Resources/AIMonitor; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000060 /* NativeAppQuotaReader */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/NativeAppQuotaReader.swift; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		H00000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (B00000000000000000000040 /* WhaleCore in Frameworks */,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		H00000000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (B00000000000000000000041 /* WhaleCore in Frameworks */,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		G00000000000000000000001 = {
+			isa = PBXGroup;
+			children = (G00000000000000000000002 /* App Sources */, G00000000000000000000003 /* Resources */, G00000000000000000000004 /* Tests */, G00000000000000000000005 /* Products */);
+			sourceTree = "<group>";
+		};
+		G00000000000000000000002 /* App Sources */ = {
+			isa = PBXGroup;
+			children = (F00000000000000000000010, F00000000000000000000011, F00000000000000000000012, F00000000000000000000013, F00000000000000000000014, F00000000000000000000015, F00000000000000000000016, F00000000000000000000017, F00000000000000000000018, F00000000000000000000019, F0000000000000000000001A, F0000000000000000000001B, F0000000000000000000001C, F0000000000000000000001D, F0000000000000000000001E, F00000000000000000000031, F00000000000000000000032, F00000000000000000000052, F00000000000000000000054, F00000000000000000000056, F00000000000000000000057, F00000000000000000000058, F00000000000000000000060);
+			name = "App Sources";
+			sourceTree = "<group>";
+		};
+		G00000000000000000000003 /* Resources */ = {
+			isa = PBXGroup;
+			children = (F00000000000000000000020, F00000000000000000000021, F00000000000000000000022, F00000000000000000000023, F00000000000000000000025, F00000000000000000000026, F00000000000000000000027, F00000000000000000000024, F00000000000000000000028, F00000000000000000000029, F00000000000000000000050, F00000000000000000000053, F00000000000000000000055, F00000000000000000000059);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		G00000000000000000000004 /* Tests */ = {
+			isa = PBXGroup;
+			children = (F00000000000000000000030);
+			name = Tests;
+			sourceTree = "<group>";
+		};
+		G00000000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (F00000000000000000000001 /* WhaleGirl.app */, F00000000000000000000002 /* WhaleGirlTests.xctest */);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		T00000000000000000000001 /* WhaleGirl */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L00000000000000000000002 /* Build configuration list for PBXNativeTarget "WhaleGirl" */;
+			buildPhases = (S00000000000000000000001 /* Sources */, H00000000000000000000001 /* Frameworks */, R00000000000000000000001 /* Resources */);
+			buildRules = ();
+			dependencies = ();
+			name = WhaleGirl;
+			packageProductDependencies = (P00000000000000000000002 /* WhaleCore */);
+			productName = WhaleGirl;
+			productReference = F00000000000000000000001 /* WhaleGirl.app */;
+			productType = "com.apple.product-type.application";
+		};
+		T00000000000000000000002 /* WhaleGirlTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = L00000000000000000000003 /* Build configuration list for PBXNativeTarget "WhaleGirlTests" */;
+			buildPhases = (S00000000000000000000002 /* Sources */, H00000000000000000000002 /* Frameworks */);
+			buildRules = ();
+			dependencies = (D00000000000000000000001 /* PBXTargetDependency */);
+			name = WhaleGirlTests;
+			packageProductDependencies = (P00000000000000000000003 /* WhaleCore */);
+			productName = WhaleGirlTests;
+			productReference = F00000000000000000000002 /* WhaleGirlTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 2700; LastUpgradeCheck = 2700; TargetAttributes = {T00000000000000000000001 = {CreatedOnToolsVersion = 27.0; }; T00000000000000000000002 = {CreatedOnToolsVersion = 27.0; TestTargetID = T00000000000000000000001; };};};
+			buildConfigurationList = L00000000000000000000001 /* Build configuration list for PBXProject "WhaleGirl" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base);
+			mainGroup = G00000000000000000000001;
+			packageReferences = (P00000000000000000000001 /* XCLocalSwiftPackageReference "Packages/WhaleCore" */);
+			productRefGroup = G00000000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (T00000000000000000000001 /* WhaleGirl */, T00000000000000000000002 /* WhaleGirlTests */);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R00000000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (B00000000000000000000020, B00000000000000000000021, B00000000000000000000022, B00000000000000000000023, B00000000000000000000025, B00000000000000000000026, B00000000000000000000027, B00000000000000000000024, B00000000000000000000028, B00000000000000000000029, B00000000000000000000050, B00000000000000000000051, B00000000000000000000053, B00000000000000000000055, B00000000000000000000059);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		S00000000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (B00000000000000000000001, B00000000000000000000002, B00000000000000000000003, B00000000000000000000004, B00000000000000000000005, B00000000000000000000006, B00000000000000000000007, B00000000000000000000008, B00000000000000000000009, B0000000000000000000000A, B0000000000000000000000B, B0000000000000000000000C, B0000000000000000000000D, B0000000000000000000000E, B00000000000000000000010, B00000000000000000000011, B00000000000000000000052, B00000000000000000000054, B00000000000000000000056, B00000000000000000000057, B00000000000000000000058, B00000000000000000000060);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		S00000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (B00000000000000000000030,);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00000000000000000000001 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = T00000000000000000000001 /* WhaleGirl */; targetProxy = X00000000000000000000001 /* PBXContainerItemProxy */; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		C00000000000000000000100 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {ARCHS = arm64; CLANG_ENABLE_MODULES = YES; ENABLE_TESTABILITY = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; ONLY_ACTIVE_ARCH = YES; SDKROOT = macosx; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0; }; name = Debug; };
+		C00000000000000000000101 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {ARCHS = "$(ARCHS_STANDARD)"; CLANG_ENABLE_MODULES = YES; MACOSX_DEPLOYMENT_TARGET = 14.0; SDKROOT = macosx; SWIFT_COMPILATION_MODE = wholemodule; SWIFT_STRICT_CONCURRENCY = complete; SWIFT_VERSION = 6.0; }; name = Release; };
+		C00000000000000000000200 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; COMBINE_HIDPI_IMAGES = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Apps/macOS/Info.plist; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; PRODUCT_BUNDLE_IDENTIFIER = io.whalegirl.app; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Debug; };
+		C00000000000000000000201 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; COMBINE_HIDPI_IMAGES = YES; ENABLE_HARDENED_RUNTIME = YES; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Apps/macOS/Info.plist; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks"; PRODUCT_BUNDLE_IDENTIFIER = io.whalegirl.app; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; }; name = Release; };
+		C00000000000000000000300 /* Debug */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"; PRODUCT_BUNDLE_IDENTIFIER = io.whalegirl.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = NO; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WhaleGirl.app/Contents/MacOS/WhaleGirl"; }; name = Debug; };
+		C00000000000000000000301 /* Release */ = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; GENERATE_INFOPLIST_FILE = YES; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks"; PRODUCT_BUNDLE_IDENTIFIER = io.whalegirl.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = NO; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/WhaleGirl.app/Contents/MacOS/WhaleGirl"; }; name = Release; };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		L00000000000000000000001 /* Build configuration list for PBXProject "WhaleGirl" */ = {isa = XCConfigurationList; buildConfigurations = (C00000000000000000000100, C00000000000000000000101); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		L00000000000000000000002 /* Build configuration list for PBXNativeTarget "WhaleGirl" */ = {isa = XCConfigurationList; buildConfigurations = (C00000000000000000000200, C00000000000000000000201); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		L00000000000000000000003 /* Build configuration list for PBXNativeTarget "WhaleGirlTests" */ = {isa = XCConfigurationList; buildConfigurations = (C00000000000000000000300, C00000000000000000000301); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		P00000000000000000000001 /* XCLocalSwiftPackageReference "Packages/WhaleCore" */ = {isa = XCLocalSwiftPackageReference; relativePath = Packages/WhaleCore; };
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		P00000000000000000000002 /* WhaleCore */ = {isa = XCSwiftPackageProductDependency; package = P00000000000000000000001 /* XCLocalSwiftPackageReference "Packages/WhaleCore" */; productName = WhaleCore; };
+		P00000000000000000000003 /* WhaleCore */ = {isa = XCSwiftPackageProductDependency; package = P00000000000000000000001 /* XCLocalSwiftPackageReference "Packages/WhaleCore" */; productName = WhaleCore; };
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
+}

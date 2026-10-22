@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

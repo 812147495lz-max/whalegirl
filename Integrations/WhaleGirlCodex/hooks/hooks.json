@@ -1,0 +1,122 @@
+{
+  "description": "Send redacted lifecycle events to WhaleGirl without changing Codex decisions.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "Interrupt": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "async": true,
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"${PLUGIN_ROOT}/hooks/whalegirl_hook_bridge.py\"",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}
