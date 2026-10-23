@@ -13,3 +13,7 @@ Only image data is used. No upstream application code, installation scripts, API
 ## v1.0 public distribution
 
 The publisher has confirmed permission to include these assets in this public release. This does not relicense the artwork under MIT or grant third parties unrestricted reuse; the original attribution and independent permission requirements remain.
+
+## v1.5 public distribution
+
+The publisher previously confirmed permission to publicly distribute the complete additional artwork and user-provided animations retained in this release. This does not relicense third-party artwork under MIT or grant unrestricted reuse; original credits and independent permission requirements remain.

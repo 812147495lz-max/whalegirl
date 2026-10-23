@@ -19,3 +19,6 @@ xcuserdata/
 *.zip
 .env
 .env.*
+
+*.log
+UserData/

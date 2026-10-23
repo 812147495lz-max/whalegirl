@@ -1,0 +1,10 @@
+{
+  "name": "whalegirl",
+  "platform": "macOS AppKit",
+  "reference": "812147495lz-max/ui-design",
+  "referenceCommit": "db8d1113e3d22936f5f996dcdbb365deff0e9f72",
+  "profile": "bubble-glass",
+  "implementation": ["InformationPalette", "WhalePanelStyle", "WhaleMetricTile", "MetricTrendView"],
+  "density": "native-compact",
+  "validation": "build and basic use only"
+}

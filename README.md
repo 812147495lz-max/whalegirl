@@ -2,13 +2,24 @@
 
 macOS 菜单栏鲸鱼娘与桌宠，支持系统信息展示、AI 工具额度面板，以及基于真实工作事件的 Agent 陪伴。
 
-**首个公开版本：v1.0 · macOS 14+ · Apple silicon / Intel Universal**
+**当前版本：v1.5 · macOS 14+ · Apple silicon / Intel Universal**
 
 ## 下载与安装
 
-在 [Releases](https://github.com/812147495lz-max/whalegirl/releases/latest) 下载 `WhaleGirl-v1.0-Universal.dmg`，打开后把 `WhaleGirl.app` 拖入 Applications。也提供 ZIP，解压后移动到 Applications。
+在 [Releases](https://github.com/812147495lz-max/whalegirl/releases/latest) 下载 `WhaleGirl-v1.5-Universal.dmg`，打开后把 `WhaleGirl.app` 拖入 Applications。也提供 ZIP，解压后移动到 Applications。
 
-当前发行使用本地 ad-hoc 签名，未经过 Apple 公证；macOS 可能显示来源或安全提示。安装包的 SHA-256 见 Release 附件 `SHA256SUMS.txt`。
+当前发行使用本地 ad-hoc 签名，未经过 Apple 公证；macOS 可能显示来源或安全提示。安装包的 SHA-256 见 Release 附件 `SHA256SUMS-v1.5.txt`。
+
+## v1.5 更新
+
+- 紧凑统一的信息卡；CPU、GPU、内存、网络、电池、温度折线图可分别开关，时间范围只显示一次。
+- 网络测速支持常用站点或自定义网址/IP、逐跳 IP/延迟与详情设置；仅主动点击后测试。内外网 IPv4/IPv6 完整显示并统一右对齐。
+- 可切换两列小型双环额度仪表：内圈/上方为小时剩余，外圈/下方为周剩余；文字模式同样右对齐，有真实重置时间才显示倒计时。
+- DSH 主 Agent 在右下角保持工作，优先工作/表情与偷吃 Token 动作；气泡显示余额、今日已观测消费和转峰/转谷时间。DSH 余额环默认满量程50元，可修改。
+- Codex 实际额度恢复后提醒一次；主 Agent 回复/会话完成提醒附带可读取的剩余额度。
+- 菜单栏尾巴改用连续时间调速，保留25%负载约15FPS、99%约45FPS的目标范围，减少变速滞后和计时延迟积累。
+
+DSH 今日已用基于独立余额观察，首次成功读取才建立基线，部分当日数据和充值调整会标记；不是完整官方账单。Gemini/Grok 桌面版的额度限制不因本次更新改变。详见 [实时指标](docs/usage/LIVE_METRICS.md)、[网络诊断](docs/usage/NETWORK_DIAGNOSTICS.md) 与 [DSH 余额桌宠](docs/usage/DSH_BALANCE_COMPANION.md)。
 
 ## 功能
 
@@ -18,17 +29,17 @@ macOS 菜单栏鲸鱼娘与桌宠，支持系统信息展示、AI 工具额度�
 - 动作间回到默认状态，经典系列随机动作后横向溜达；动画资源共享并后台准备，共用移动时钟。
 - 系统信息可独立选择型号、CPU、GPU、内存、电池、存储、网络、温度等；无法获取时显示不可用。
 - AI 额度项目可独立开关；额度查询和 Agent 工作事件分别接入。
-- 主 Agent 与子代理收到真实工作事件后生成桌宠；主 Agent 工作时显示通用思考文案，不读取模型推理内容。
+- 主 Agent 与子代理收到真实工作事件后生成桌宠；主 Agent 工作时显示通用思考文案，DSH 主 Agent 显示余额气泡；不读取模型推理内容。
 - 主 Agent 一轮完成后，菜单栏探头气泡提醒 10 秒；子代理完成不触发系统通知或探头提醒。
 - 自动桌宠完成后等待 10–20 秒退场，带挥手、柔光光环、上升和圆弧羽化擦除；恢复工作会取消退场。手动桌宠不受自动回收影响。
 - 气泡文案使用外部 CSV，可编辑后即时用于下一条气泡。
 
 ## AI 接入状态
 
-| 项目 | v1.0 状态 |
+| 项目 | 当前状态 |
 |---|---|
 | Codex | 本机 app-server 额度读取；原生 Hook 事件桥 |
-| DeepSeek Harness | 既有账号余额读取；主代理心跳、子代理和重连事件桥 |
+| DSH | 既有账号余额读取；主代理心跳、子代理和重连事件桥 |
 | OpenCode | Go 额度适配器；官方插件事件桥 |
 | Cursor、Gemini CLI、Copilot 等 | 按工具提供额度兼容后端或事件桥；部分事件需在工具中重载并授权 |
 | Gemini 桌面版 | macOS 辅助功能读取用量页，需打开“设置 → 用量限额”；这不是内部额度 API 接通 |
@@ -71,11 +82,11 @@ node Tests/Integration/test_opencode_bridge.mjs
 ## 已验证与限制
 
 - 实际构建和运行验证在 Apple silicon/macOS 26.6.2 上完成；Universal 架构、macOS 14 部署目标、归档完整性及签名另行校验。
-- 原生动画、Agent 生命周期、协议、额度解析和面板有自动化回归测试。
+- 既有原生动画、Agent 生命周期、协议、额度解析和面板有回归检查；近期8个动画计时与4个余额观察用例通过。v1.5 仅改版本/发布资料并重新构建、检查安装包，未重新运行全套测试。
 - Intel 实机、所有 AI 软件的真实模型运行、多显示器切换和大量桌宠长期性能尚未全面验收。
 - 保留全屏避让；“支持”的代码路径不代表所有 Spaces/全屏/硬件组合均完成实机验收。
 
-版本说明见 [v1.0](docs/releases/v1.0.md)，开发边界与验证说明见 [HANDOFF.md](HANDOFF.md)。
+版本说明见 [v1.5](docs/releases/v1.5.md)（[首版 v1.0](docs/releases/v1.0.md)），开发边界与验证说明见 [HANDOFF.md](HANDOFF.md)。
 
 ## 素材与许可
 

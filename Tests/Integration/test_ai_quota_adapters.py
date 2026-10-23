@@ -48,6 +48,67 @@ class QuotaAdapterTests(unittest.TestCase):
         self.assertEqual(result['balances'][0]['amount'], '0.3')
         self.assertEqual(result['balances'][0]['bonusAmount'], '0.2')
 
+    def test_dsh_widget_observed_spend_recharge_and_privacy(self):
+        import tempfile, datetime as dt
+        now=dt.datetime(2026,10,23,2,tzinfo=dt.timezone.utc)
+        value=lambda amount: dict(state='ready',balances=[dict(currency='CNY',amount=amount)],secret='PRIVATE')
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'observations.json'
+            first=usage.dsh_cost_status(value('10'),'a'*24,path,now)
+            down=usage.dsh_cost_status(value('9.5'),'a'*24,path,now+dt.timedelta(minutes=1))
+            topup=usage.dsh_cost_status(value('20'),'a'*24,path,now+dt.timedelta(minutes=2))
+            spent=usage.dsh_cost_status(value('19.75'),'a'*24,path,now+dt.timedelta(minutes=3))
+            self.assertNotIn('PRIVATE',path.read_text())
+        self.assertEqual(first['todayAmount'],'0')
+        self.assertTrue(first['partialDay'])
+        self.assertEqual(down['todayAmount'],'0.5')
+        self.assertEqual(topup['todayAmount'],'0.5')
+        self.assertTrue(topup['needsReview'])
+        self.assertEqual(spent['todayAmount'],'0.75')
+        self.assertEqual(spent['usageSource'],'balance-observed')
+        self.assertNotIn('a'*24,str(spent))
+        self.assertNotIn('PRIVATE',str(spent))
+
+    def test_dsh_widget_isolates_account_currency_and_beijing_midnight(self):
+        import tempfile,datetime as dt
+        now=dt.datetime(2026,10,23,15,58,tzinfo=dt.timezone.utc)
+        value=lambda currency,amount: dict(state='ready',balances=[dict(currency=currency,amount=amount)])
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'observations.json'
+            usage.dsh_cost_status(value('CNY','5'),'a'*24,path,now)
+            day=usage.dsh_cost_status(value('CNY','4'),'a'*24,path,now+dt.timedelta(minutes=1))
+            duplicate=usage.dsh_cost_status(value('CNY','0'),'a'*24,path,now)
+            other=usage.dsh_cost_status(value('CNY','100'),'b'*24,path,now+dt.timedelta(minutes=1))
+            usd=usage.dsh_cost_status(value('USD','2'),'a'*24,path,now+dt.timedelta(minutes=1))
+            tomorrow=usage.dsh_cost_status(value('CNY','3'),'a'*24,path,now+dt.timedelta(minutes=3))
+        self.assertEqual(day['todayAmount'],'1')
+        self.assertEqual(duplicate['todayAmount'],'1')
+        self.assertEqual(other['todayAmount'],'0')
+        self.assertEqual(usd['todayAmount'],'0')
+        self.assertEqual(tomorrow['todayAmount'],'0')
+        self.assertEqual(tomorrow['day'],'2026-10-24')
+        self.assertFalse(tomorrow['partialDay'])
+
+    def test_dsh_widget_corrupt_ledger_is_not_overwritten_or_zeroed(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'observations.json';path.write_text('broken PRIVATE')
+            result=usage.dsh_cost_status(dict(state='ready',balances=[dict(currency='CNY',amount='10')]),'a'*24,path)
+            self.assertEqual(path.read_text(),'broken PRIVATE')
+        self.assertNotIn('todayAmount',result)
+        self.assertEqual(result['usageSource'],'unavailable')
+        self.assertNotIn('PRIVATE',str(result))
+
+    def test_dsh_widget_pinned_weekend_and_holiday_schedule(self):
+        import datetime as dt
+        weekend=usage.dsh_widget_pricing(dt.datetime(2026,10,24,2,tzinfo=dt.timezone.utc))
+        holiday=usage.dsh_widget_pricing(dt.datetime(2026,10,1,2,tzinfo=dt.timezone.utc))
+        self.assertEqual(weekend['pricePhase'],'offPeak')
+        self.assertEqual(weekend['nextSwitchAt'],'2026-10-26T01:00:00Z')
+        self.assertEqual(holiday['pricePhase'],'offPeak')
+        self.assertEqual(holiday['nextSwitchAt'],'2026-10-08T01:00:00Z')
+        self.assertNotIn('todayAmount',usage.dsh_cost_status())
+
     def test_opencode_direct_percent_is_not_fraction_or_browser_data(self):
         payload = dict(email='PRIVATE', usage=dict(rolling=dict(percent=0.5, resetInSec=3600), weekly=dict(percent=24), monthly=dict(percent=110)))
         result = usage.normalize_opencode_go(payload)

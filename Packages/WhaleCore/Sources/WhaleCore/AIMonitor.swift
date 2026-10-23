@@ -1,5 +1,18 @@
 import Foundation
 
+public enum QuotaTimeText {
+    public static func remaining(until date: Date, now: Date = Date()) -> String {
+        let interval = date.timeIntervalSince(now)
+        guard interval.isFinite, interval < Double(Int.max / 2) else { return "时间未知" }
+        guard interval > 0 else { return "即将更新" }
+        let seconds = Int(interval), days = seconds / 86400, hours = seconds % 86400 / 3600, minutes = seconds % 3600 / 60
+        if days > 0 { return "\(days)天\(hours)小时" }
+        if hours > 0 { return "\(hours)小时" + (minutes > 0 ? "\(minutes)分" : "") }
+        if minutes > 0 { return "\(minutes)分钟" }
+        return "不到1分钟"
+    }
+}
+
 public struct AIQuotaWindow: Codable, Equatable, Sendable {
     public var durationSeconds: Int
     public var remainingPercent: Double
@@ -11,6 +24,11 @@ public struct AIQuotaWindow: Codable, Equatable, Sendable {
         self.resetsAt = resetsAt; self.bucket = bucket; self.periodLabel = periodLabel
     }
     public var isValid: Bool { (durationSeconds > 0 || (durationSeconds == 0 && !(periodLabel ?? "").isEmpty)) && durationSeconds <= 366 * 86400 && (periodLabel?.count ?? 0) <= 60 && remainingPercent.isFinite && (0...100).contains(remainingPercent) }
+    public func resetDescription(at now: Date = Date()) -> String {
+        guard let resetsAt else { return "重置时间未知" }
+        guard resetsAt > now else { return "等待重置更新" }
+        return QuotaTimeText.remaining(until: resetsAt, now: now) + "后重置"
+    }
     public var periodTitle: String {
         if durationSeconds == 0 { return periodLabel ?? "额度" }
         if durationSeconds == 604800 { return "周" }
@@ -36,16 +54,36 @@ public struct AIQuotaBalance: Codable, Equatable, Sendable {
     }
 }
 
+public struct DSHCostStatus: Codable, Equatable, Sendable {
+    public var day: String
+    public var currency: String
+    public var todayAmount: String?
+    public var pricePhase: String
+    public var nextSwitchAt: Date?
+    public var usageSource: String?
+    public var partialDay: Bool?
+    public var needsReview: Bool?
+    public var observedFrom: Date?
+    public var isValid: Bool {
+        day.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
+            && ["CNY", "USD", "EUR"].contains(currency)
+            && ["peak", "offPeak", "disabled", "unavailable"].contains(pricePhase)
+            && (usageSource.map { ["balance-observed", "unavailable"].contains($0) } ?? true)
+            && (todayAmount.map { AIQuotaBalance(currency: currency, amount: $0).isValid && (Decimal(string: $0) ?? -1) >= 0 } ?? true)
+    }
+}
+
 public struct AIQuotaReading: Codable, Equatable, Sendable {
     public var providerId: String
     public var state: String
     public var fetchedAt: Date
     public var windows: [AIQuotaWindow]
     public var balances: [AIQuotaBalance]
-    public init(providerId: String, state: String, fetchedAt: Date = Date(), windows: [AIQuotaWindow] = [], balances: [AIQuotaBalance] = []) {
-        self.providerId = providerId; self.state = state; self.fetchedAt = fetchedAt; self.windows = windows; self.balances = balances
+    public var dshCostStatus: DSHCostStatus?
+    public init(providerId: String, state: String, fetchedAt: Date = Date(), windows: [AIQuotaWindow] = [], balances: [AIQuotaBalance] = [], dshCostStatus: DSHCostStatus? = nil) {
+        self.providerId = providerId; self.state = state; self.fetchedAt = fetchedAt; self.windows = windows; self.balances = balances; self.dshCostStatus = dshCostStatus
     }
-    public var isValid: Bool { windows.count <= 30 && balances.count <= 10 && windows.allSatisfy(\.isValid) && balances.allSatisfy(\.isValid) }
+    public var isValid: Bool { windows.count <= 30 && balances.count <= 10 && windows.allSatisfy(\.isValid) && balances.allSatisfy(\.isValid) && (dshCostStatus?.isValid ?? true) }
     public func isStale(at now: Date) -> Bool { now.timeIntervalSince(fetchedAt) > 300 || fetchedAt.timeIntervalSince(now) > 60 }
     public var statusTitle: String {
         switch state {
@@ -72,6 +110,7 @@ public struct AIQuotaProvider: Codable, Equatable, Identifiable, Sendable {
     public var name: String
     public var enabled: Bool
     public var adapter: String
+    public var displayName: String { id == "dsh" ? "DSH" : name }
     public var snapshotPath: String?
     public var backendProvider: String?
     public init(id: String, name: String, enabled: Bool = true, adapter: String = "snapshot", snapshotPath: String? = nil, backendProvider: String? = nil) {
@@ -92,7 +131,7 @@ public struct AIMonitorPreferences: Codable, Equatable, Sendable {
     public init(providers: [AIQuotaProvider]) { self.providers = providers }
     public static let defaults = AIMonitorPreferences(providers: [
         .init(id: "codex", name: "Codex", adapter: "codex"),
-        .init(id: "dsh", name: "DeepSeek Harness", adapter: "dsh"),
+        .init(id: "dsh", name: "DSH", adapter: "dsh"),
         .init(id: "gemini", name: "Gemini 桌面版", adapter: "nativeApp"), .init(id: "grok", name: "Grok Bot", adapter: "nativeApp"),
         .init(id: "claudecc", name: "Claude Code", adapter: "codexbar", backendProvider: "claude"), .init(id: "cursor", name: "Cursor", adapter: "codexbar"),
         .init(id: "copilot", name: "GitHub Copilot", adapter: "codexbar"), .init(id: "opencode", name: "OpenCode Go", adapter: "opencode"),
@@ -236,7 +275,7 @@ public struct ReplyCompletionTracker: Sendable {
     public init() {}
     public static func providerName(for event: WhaleEvent) -> String? {
         if event.source == .codex { return "Codex" }
-        if event.source == .dsh { return "DeepSeek Harness" }
+        if event.source == .dsh { return "DSH" }
         guard event.source == .remote else { return nil }
         let names = ["claude": "Claude Code", "claudecc": "Claude Code", "claude-code": "Claude Code",
                      "gemini-cli": "Gemini CLI", "grok-cli": "Grok Build CLI",
@@ -259,7 +298,7 @@ public struct ReplyCompletionTracker: Sendable {
             if event.occurredAt < entry.occurredAt { return nil }
             if let old = entry.sequence, let new = event.sequence, new <= old { return nil }
         }
-        let completed = event.eventType == "agent.turn_completed"
+        let completed = ["agent.turn_completed", "agent.session_completed"].contains(event.eventType)
         let active = ["agent.working", "agent.session_started"].contains(event.eventType)
         guard completed || active else { return nil }
         if completed, entries[key]?.completed == true { return nil }

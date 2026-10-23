@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Read-only quota adapters. Never print credentials, conversations or raw server errors."""
 import concurrent.futures
+import fcntl
+import hashlib
+import tempfile
 import datetime as dt
 import decimal
 import json
@@ -192,9 +195,9 @@ def normalize_dsh(payload):
     return reading('dsh', 'ready' if balances else 'unsupported', balances=balances)
 
 
-def dsh_balance():
+def dsh_balance(grant=None):
     try:
-        grant = dsh_grant()
+        grant = grant or dsh_grant()
         if not grant:
             return reading('dsh', 'signInRequired')
         request = urllib.request.Request('https://platform.deepseek.com/api/v0/users/get_user_summary', headers={
@@ -210,6 +213,144 @@ def dsh_balance():
         return reading('dsh', 'signInRequired' if error.code in [401, 403] else 'unavailable')
     except (OSError, ValueError, TypeError, decimal.InvalidOperation):
         return reading('dsh', 'unavailable')
+
+
+def dsh_widget_pricing(now):
+    """Pinned DeepSeek-Balance-Whale-Widget calendar; no cost-meter dependency."""
+    status = dict(pricePhase='unavailable')
+    try:
+        path = Path(__file__).with_name('WhaleBalanceWidgetReference.json')
+        if path.stat().st_size > 65536: return status
+        reference = json.loads(path.read_text())
+        holidays = set(reference['holidays'])
+        windows = reference['peakHoursBeijing']
+        weekend_start = dt.datetime.fromisoformat(reference['weekendEffectiveAt'].replace('Z', '+00:00'))
+        holiday_start = dt.datetime.fromisoformat(reference['holidayEffectiveAt'].replace('Z', '+00:00'))
+        beijing = dt.timezone(dt.timedelta(hours=8))
+        local = now.astimezone(beijing)
+        # Do not silently invent a future year's statutory holiday calendar.
+        known_years = {int(day[:4]) for day in holidays}
+        if local.year not in known_years: return status
+        def peak(at):
+            day = at.astimezone(beijing)
+            if at >= weekend_start and day.weekday() >= 5: return False
+            if at >= holiday_start and day.strftime('%Y-%m-%d') in holidays: return False
+            return any(start <= day.hour < end for start, end in windows)
+        current = peak(now)
+        status['pricePhase'] = 'peak' if current else 'offPeak'
+        midnight = local.replace(hour=0, minute=0, second=0, microsecond=0)
+        for offset in range(13):
+            for edge in sorted({0, *[hour for window in windows for hour in window]}):
+                candidate = midnight + dt.timedelta(days=offset, hours=edge)
+                if candidate <= now + dt.timedelta(seconds=1): continue
+                if candidate.year not in known_years: return status
+                if peak(candidate) != current:
+                    status['nextSwitchAt'] = candidate.astimezone(dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+                    return status
+    except (OSError, ValueError, TypeError, KeyError, OverflowError):
+        return dict(pricePhase='unavailable')
+    return status
+
+
+def dsh_cost_status(value=None, scope=None, accounting_path=None, now=None):
+    """Observe balance drops like MeteorNOX's widget, independently of token estimates.
+    Fixed-point 1e-8 units, account/currency/Beijing-day isolation, credits never offset usage.
+    Only our own bounded ledger is written; no DSH or external-widget files are changed.
+    """
+    now = now or dt.datetime.now(dt.timezone.utc)
+    beijing = dt.timezone(dt.timedelta(hours=8))
+    local = now.astimezone(beijing)
+    day = local.strftime('%Y-%m-%d')
+    status = dict(day=day, currency='CNY', usageSource='unavailable', **dsh_widget_pricing(now))
+    if not isinstance(value, dict) or value.get('state') != 'ready' or not accounting_path or not re.fullmatch(r'[a-f0-9]{24,64}', scope or ''):
+        return status
+    def units(amount):
+        if isinstance(amount, bool): raise ValueError('invalid balance')
+        n = decimal.Decimal(str(amount))
+        if not n.is_finite(): raise ValueError('invalid balance')
+        n = int((n * 100000000 + decimal.Decimal('0.5')).to_integral_value(rounding=decimal.ROUND_FLOOR))
+        if abs(n) > 9007199254740991: raise ValueError('balance out of range')
+        return n
+    def safe_integer(number, nonnegative=False):
+        if not isinstance(number, int) or isinstance(number, bool) or abs(number) > 9007199254740991 or (nonnegative and number < 0):
+            raise ValueError('invalid accounting field')
+        return number
+    try:
+        balances = [b for b in value.get('balances', []) if isinstance(b, dict) and b.get('currency') in ['CNY', 'USD', 'EUR']]
+        if not balances: return status
+        selected = next((b for b in balances if b['currency'] == 'CNY' and units(b.get('amount')) > 0), None)
+        selected = selected or next((b for b in balances if units(b.get('amount')) > 0), None)
+        selected = selected or next((b for b in balances if b['currency'] == 'CNY'), balances[0])
+        currency, current = selected['currency'], units(selected.get('amount'))
+        status['currency'] = currency
+        path = Path(accounting_path)
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        lock_fd = os.open(str(path) + '.lock', os.O_WRONLY | os.O_CREAT, 0o600)
+        with os.fdopen(lock_fd, 'w') as lock:
+            deadline = time.monotonic() + 1
+            while True:
+                try:
+                    fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB); break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline: return status
+                    time.sleep(0.02)
+            if path.exists():
+                with path.open('rb') as stream: raw = stream.read(4 * 1024 * 1024 + 1)
+                if len(raw) > 4 * 1024 * 1024: return status
+                ledger = json.loads(raw)
+                if not isinstance(ledger, dict) or ledger.get('version') != 1 or not isinstance(ledger.get('books'), dict): return status
+            else:
+                ledger = dict(version=1, books={})
+            books = ledger['books']
+            key = scope + '-' + currency
+            book = books.get(key)
+            if book is None: book = books[key] = dict(currency=currency, lastAt=0, days={})
+            if not isinstance(book, dict) or book.get('currency') != currency or not isinstance(book.get('days'), dict): return status
+            at = int(now.timestamp() * 1000)
+            last_at = safe_integer(book.get('lastAt', 0), True)
+            rows = book['days']
+            row = rows.get(day)
+            if row is not None:
+                if not isinstance(row, dict): return status
+                for field in ['firstAt', 'lastAt', 'debitUnits', 'creditUnits']:
+                    safe_integer(row[field], True)
+                safe_integer(row['lastUnits'])
+            if at > last_at:
+                if row is None:
+                    row = rows[day] = dict(firstAt=at, lastAt=at, lastUnits=current, debitUnits=0, creditUnits=0)
+                else:
+                    delta = row['lastUnits'] - current
+                    row['debitUnits'] = safe_integer(row['debitUnits'] + max(0, delta), True)
+                    row['creditUnits'] = safe_integer(row['creditUnits'] + max(0, -delta), True)
+                    row['lastUnits'] = current; row['lastAt'] = at
+                book['lastAt'] = at
+                for old in sorted(rows)[:-365]: del rows[old]
+                if len(books) > 32:
+                    for old in sorted(books, key=lambda k: books[k].get('lastAt', 0))[:-32]: del books[old]
+                fd, temporary = tempfile.mkstemp(prefix=path.name + '.', dir=path.parent)
+                try:
+                    with os.fdopen(fd, 'w') as stream:
+                        json.dump(ledger, stream, separators=(',', ':'), allow_nan=False)
+                    os.replace(temporary, path)
+                finally:
+                    if os.path.exists(temporary): os.unlink(temporary)
+            if row is None: return status
+            status.update(todayAmount=str(decimal.Decimal(row['debitUnits']) / 100000000), usageSource='balance-observed',
+                needsReview=row['creditUnits'] > 0,
+                partialDay=row['firstAt'] - int(local.replace(hour=0, minute=0, second=0, microsecond=0).timestamp() * 1000) > 600000,
+                observedFrom=dt.datetime.fromtimestamp(row['firstAt'] / 1000, dt.timezone.utc).isoformat().replace('+00:00', 'Z'))
+    except (OSError, ValueError, TypeError, KeyError, AttributeError, decimal.InvalidOperation, OverflowError):
+        pass
+    return status
+
+
+def dsh_observed_quota(accounting_path=None):
+    grant = dsh_grant()
+    value = dsh_balance(grant) if grant else reading('dsh', 'signInRequired')
+    # Token-derived identity is used only to isolate local books; token/hash never enters the response.
+    scope = hashlib.sha256(('dsh-account:' + grant['token']).encode()).hexdigest()[:24] if grant else None
+    value['dshCostStatus'] = dsh_cost_status(value, scope, accounting_path)
+    return value
 
 
 def normalize_codexbar(provider, payload):
@@ -331,7 +472,7 @@ def main():
             if adapter == 'codex':
                 result = codex_quota()
             elif adapter == 'dsh':
-                result = dsh_balance()
+                result = dsh_observed_quota(request.get('dshAccountingPath'))
             elif adapter == 'opencode':
                 result = opencode_go_quota()
             elif adapter == 'codexbar':

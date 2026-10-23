@@ -12,10 +12,10 @@ protocol DashboardWindowControllerDelegate: AnyObject {
 @MainActor
 final class DashboardWindowController: NSWindowController, NSWindowDelegate {
     weak var dashboardDelegate: DashboardWindowControllerDelegate?
-    private let cpuLabel = NSTextField(labelWithString: "CPU  --")
-    private let memoryLabel = NSTextField(labelWithString: "内存  --")
-    private let networkLabel = NSTextField(labelWithString: "网络  --")
-    private let batteryLabel = NSTextField(labelWithString: "电池  --")
+    private let cpuLabel = WhaleMetricTile("CPU")
+    private let memoryLabel = WhaleMetricTile("内存")
+    private let networkLabel = WhaleMetricTile("网络")
+    private let batteryLabel = WhaleMetricTile("电池")
     private let sessionsStack = NSStackView()
     private let emptySessionsLabel = NSTextField(labelWithString: "暂无 Agent 事件")
     private let diagnosticsLabel = NSTextField(wrappingLabelWithString: "")
@@ -27,13 +27,13 @@ final class DashboardWindowController: NSWindowController, NSWindowDelegate {
 
     init() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 510),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 590),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
         )
         panel.title = "WhaleGirl Dashboard"
-        panel.minSize = NSSize(width: 460, height: 420)
+        panel.minSize = NSSize(width: 480, height: 480)
         panel.isReleasedWhenClosed = false
         super.init(window: panel)
         panel.delegate = self
@@ -67,16 +67,12 @@ final class DashboardWindowController: NSWindowController, NSWindowDelegate {
         socketStatus: String,
         launchAtLoginStatus: String
     ) {
-        cpuLabel.stringValue = "CPU  " + formatPercent(metrics.cpuPercent)
-        memoryLabel.stringValue = "内存  \(formatBytes(metrics.memoryUsedBytes)) / \(formatBytes(metrics.memoryTotalBytes))"
-        networkLabel.stringValue = "网络  ↓\(formatRate(metrics.downloadBytesPerSecond))  ↑\(formatRate(metrics.uploadBytesPerSecond))"
-        if let percent = metrics.batteryPercent {
-            batteryLabel.stringValue = "电池  \(percent)%" + (metrics.batteryCharging == true ? " · 充电中" : "")
-        } else {
-            batteryLabel.stringValue = "电池  此设备不支持"
-        }
+        cpuLabel.update(formatPercent(metrics.cpuPercent))
+        memoryLabel.update(formatBytes(metrics.memoryUsedBytes), caption: "共 " + formatBytes(metrics.memoryTotalBytes))
+        networkLabel.update("↓ " + formatRate(metrics.downloadBytesPerSecond), caption: "↑ " + formatRate(metrics.uploadBytesPerSecond))
+        batteryLabel.update(metrics.batteryPercent.map { "\($0)%" } ?? "—", caption: metrics.batteryCharging == true ? "充电中" : "")
         renderSessions(eventState.sessions)
-        diagnosticsLabel.stringValue = "本地事件入口：\(socketStatus)\nCodex 审批监控：暂不可用（尚未安装并实测 Hook）\nDSH 审批监控：暂不可用（尚无已核实事件源）\n登录项：\(launchAtLoginStatus) · 拒绝的事件：\(eventState.decodeFailureCount)"
+        diagnosticsLabel.stringValue = "事件连接：\(socketStatus)\n登录启动：\(launchAtLoginStatus)\n未识别事件：\(eventState.decodeFailureCount)"
     }
 
     func updateSettings(quietMode: Bool, notificationsEnabled: Bool, launchAtLogin: Bool) {
@@ -86,75 +82,37 @@ final class DashboardWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func buildUI(in panel: NSPanel) {
-        guard let content = panel.contentView else { return }
-        let root = NSStackView()
-        root.orientation = .vertical
-        root.alignment = .leading
-        root.spacing = 14
-        root.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(root)
-        NSLayoutConstraint.activate([
-            root.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
-            root.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
-            root.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
-            root.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20)
-        ])
-
-        let title = NSTextField(labelWithString: "今日概览")
-        title.font = .systemFont(ofSize: 22, weight: .bold)
-        root.addArrangedSubview(title)
-
-        let metrics = NSStackView(views: [cpuLabel, memoryLabel, networkLabel, batteryLabel])
-        metrics.orientation = .horizontal
-        metrics.distribution = .fillEqually
-        metrics.spacing = 10
-        for label in [cpuLabel, memoryLabel, networkLabel, batteryLabel] {
-            label.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
-            label.lineBreakMode = .byTruncatingTail
-        }
-        root.addArrangedSubview(metrics)
-        metrics.widthAnchor.constraint(equalTo: root.widthAnchor).isActive = true
-        let metricsSeparator = separator()
-        root.addArrangedSubview(metricsSeparator)
-        metricsSeparator.widthAnchor.constraint(equalTo: root.widthAnchor).isActive = true
-
-        let agentTitle = NSTextField(labelWithString: "Agents")
-        agentTitle.font = .systemFont(ofSize: 15, weight: .semibold)
-        root.addArrangedSubview(agentTitle)
-        sessionsStack.orientation = .vertical
-        sessionsStack.alignment = .leading
-        sessionsStack.spacing = 8
-        emptySessionsLabel.textColor = .secondaryLabelColor
+        let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.drawsBackground = false
+        panel.contentView = scroll; WhalePanelStyle.surface(scroll)
+        let document = DashboardDocumentView(); document.translatesAutoresizingMaskIntoConstraints = false
+        scroll.documentView = document
+        document.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
+        let activity = NSButton(title: "活动监视器", target: self, action: #selector(openActivityMonitor))
+        WhalePanelStyle.button(activity)
+        let header = WhalePanelStyle.row([WhalePanelStyle.label("运行概览", size: 20, weight: .semibold), NSView(), activity])
+        let first = WhalePanelStyle.row([cpuLabel, memoryLabel]); first.distribution = .fillEqually
+        let second = WhalePanelStyle.row([networkLabel, batteryLabel]); second.distribution = .fillEqually
+        sessionsStack.orientation = .vertical; sessionsStack.alignment = .leading; sessionsStack.spacing = 12
+        emptySessionsLabel.font = .systemFont(ofSize: 12); emptySessionsLabel.textColor = InformationPalette.secondary
         sessionsStack.addArrangedSubview(emptySessionsLabel)
-        root.addArrangedSubview(sessionsStack)
-        sessionsStack.widthAnchor.constraint(equalTo: root.widthAnchor).isActive = true
-        let agentSeparator = separator()
-        root.addArrangedSubview(agentSeparator)
-        agentSeparator.widthAnchor.constraint(equalTo: root.widthAnchor).isActive = true
-
-        let diagnosticTitle = NSTextField(labelWithString: "连接与诊断")
-        diagnosticTitle.font = .systemFont(ofSize: 15, weight: .semibold)
-        root.addArrangedSubview(diagnosticTitle)
-        diagnosticsLabel.textColor = .secondaryLabelColor
-        diagnosticsLabel.font = .systemFont(ofSize: 12)
-        diagnosticsLabel.maximumNumberOfLines = 5
-        root.addArrangedSubview(diagnosticsLabel)
-
-        let actions = NSStackView()
-        actions.orientation = .horizontal
-        actions.spacing = 14
-        let activity = NSButton(title: "打开活动监视器", target: self, action: #selector(openActivityMonitor))
-        quietButton.target = self
-        quietButton.action = #selector(toggleQuietMode)
-        notificationsButton.target = self
-        notificationsButton.action = #selector(toggleNotifications)
-        launchAtLoginButton.target = self
-        launchAtLoginButton.action = #selector(toggleLaunchAtLogin)
-        actions.addArrangedSubview(activity)
-        actions.addArrangedSubview(quietButton)
-        actions.addArrangedSubview(notificationsButton)
-        actions.addArrangedSubview(launchAtLoginButton)
-        root.addArrangedSubview(actions)
+        quietButton.target = self; quietButton.action = #selector(toggleQuietMode)
+        notificationsButton.target = self; notificationsButton.action = #selector(toggleNotifications)
+        launchAtLoginButton.target = self; launchAtLoginButton.action = #selector(toggleLaunchAtLogin)
+        for button in [quietButton, notificationsButton, launchAtLoginButton] { button.font = .systemFont(ofSize: 12) }
+        let preferences = WhalePanelStyle.card(WhalePanelStyle.row([quietButton, notificationsButton, launchAtLoginButton, NSView()], spacing: 14))
+        diagnosticsLabel.font = .systemFont(ofSize: 12); diagnosticsLabel.textColor = InformationPalette.secondary
+        let diagnostic = NSButton(title: "连接详情", target: self, action: #selector(toggleDiagnostics(_:)))
+        diagnostic.isBordered = false; diagnostic.contentTintColor = WhalePanelStyle.accent; diagnostic.font = .systemFont(ofSize: 12)
+        diagnosticsLabel.isHidden = true
+        let root = WhalePanelStyle.column([header, first, second, WhalePanelStyle.label("Agent 会话", size: 13, weight: .semibold), WhalePanelStyle.card(sessionsStack), preferences, diagnostic, diagnosticsLabel], spacing: 16)
+        root.translatesAutoresizingMaskIntoConstraints = false; document.addSubview(root)
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: document.leadingAnchor, constant: 20), root.trailingAnchor.constraint(equalTo: document.trailingAnchor, constant: -20),
+            root.topAnchor.constraint(equalTo: document.topAnchor, constant: 20), root.bottomAnchor.constraint(equalTo: document.bottomAnchor, constant: -20)
+        ])
+    }
+    @objc private func toggleDiagnostics(_ sender: NSButton) {
+        diagnosticsLabel.isHidden.toggle(); sender.title = diagnosticsLabel.isHidden ? "连接详情" : "收起详情"
     }
 
     private func separator() -> NSBox {
@@ -225,3 +183,5 @@ final class DashboardWindowController: NSWindowController, NSWindowDelegate {
     @objc private func toggleNotifications() { dashboardDelegate?.dashboardDidChangeNotifications(notificationsButton.state == .on) }
     @objc private func toggleLaunchAtLogin() { dashboardDelegate?.dashboardDidChangeLaunchAtLogin(launchAtLoginButton.state == .on) }
 }
+
+private final class DashboardDocumentView: NSView { override var isFlipped: Bool { true } }

@@ -10,10 +10,15 @@ final class AppCoordinator: NSObject {
     private var desktopPets: [RoamPanelController] = []
     private let agentCompanions = AgentCompanionController()
     private var replyCompletions = ReplyCompletionTracker()
+    private var completionTasks: [UUID: Task<Void, Never>] = [:]
     private var agentBoundPets: [String: RoamPanelController] = [:]
+    private var dshStatusTask: Task<Void, Never>?
+    private var dshStatusBegins: [String: Date] = [:]
     private var aiObservation: AIMonitorObservation?
     private weak var draggedMenuPet: RoamPanelController?
     private let roamPanel: RoamPanelController
+    private var informationWindow: NSWindow?
+    private var informationWindowTask: Task<Void, Never>?
     private let dashboard: DashboardWindowController
     private let metricsSampler: SystemMetricsSampler
     private let eventHub = EventHub()
@@ -85,6 +90,10 @@ final class AppCoordinator: NSObject {
         dashboard = DashboardWindowController()
         super.init()
         menuBar.delegate = self
+        AIMonitorStore.shared.onQuotaRecovered = { [weak self] line in
+            guard let self, !self.quietMode else { return }
+            self.menuBar.showQuotaRecovery(line)
+        }
         roamPanel.interactionDelegate = self
         roamPanel.onClose = { [weak self] in self?.dispatch(.dismissRequested) }
         roamPanel.onSelectSkin = { [weak self] in self?.menuBarDidSelectSkin($0) }
@@ -92,30 +101,51 @@ final class AppCoordinator: NSObject {
         dashboard.onRefresh = { [weak self] in self?.refreshDashboard() }
         agentCompanions.onSpawn = { [weak self] key in
             guard let self else { return }
-            if let existing = self.agentBoundPets[key] { existing.cancelAgentDeparture(); return }
+            if let existing = self.agentBoundPets[key] {
+                existing.cancelAgentDeparture()
+                if key.hasPrefix("root|dsh|") { self.startDSHStatus(for: key) }
+                return
+            }
             guard let screen = NSScreen.main ?? NSScreen.screens.first else {
                 self.logger.error("Agent companion could not find a display")
                 self.agentCompanions.dismiss(key); return
             }
             let area = screen.visibleFrame
-            let point = CGPoint(x: area.minX + area.width * Double.random(in: 0.25...0.75),
+            let isDSHMain = key.hasPrefix("root|dsh|")
+            let point: CGPoint
+            if isDSHMain {
+                let height = DisplayGeometry.fullHeight(screenFrame: screen.frame, userScale: self.displayScale)
+                let width = height * self.repository.canvasAspect(for: "full.idle")
+                let slot = self.agentBoundPets.keys.filter { $0.hasPrefix("root|dsh|") }.count % 3
+                point = CGPoint(x: area.maxX - width / 2 - 16 - CGFloat(slot) * width * 0.75,
+                                y: area.minY + height / 2 + 12)
+            } else {
+                point = CGPoint(x: area.minX + area.width * Double.random(in: 0.25...0.75),
                                 y: area.minY + area.height * Double.random(in: 0.25...0.75))
-            guard let pet = self.spawnDesktopPet(at: point, agentManaged: true) else { self.agentCompanions.dismiss(key); return }
+            }
+            guard let pet = self.spawnDesktopPet(at: point, agentManaged: true, dshBalanceCompanion: isDSHMain) else { self.agentCompanions.dismiss(key); return }
             self.agentBoundPets[key] = pet
             let id = key.split(separator: "|").last.map(String.init) ?? "agent"
             let introduction = key.hasPrefix("root|")
                 ? "\(self.agentCompanions.labels[key] ?? "主 Agent") 开始工作啦"
                 : AgentCompanionSpeech.introduction(id: id, label: self.agentCompanions.labels[key])
             pet.beginAgentLife(introduction: introduction)
+            if isDSHMain { self.startDSHStatus(for: key) }
             self.logger.notice("Agent companion created; visible=\(pet.isVisible, privacy: .public), count=\(self.agentBoundPets.count, privacy: .public)")
         }
-        agentCompanions.onThinking = { [weak self] key, line in self?.agentBoundPets[key]?.sayThinking(line) }
+        agentCompanions.onThinking = { [weak self] key, line in
+            guard !key.hasPrefix("root|dsh|") else { return }
+            self?.agentBoundPets[key]?.sayThinking(line)
+        }
         agentCompanions.onFinished = { [weak self] key, connected in
             guard let self, let pet = self.agentBoundPets[key], let deadline = self.agentCompanions.roster.entries[key]?.retireAt else { return }
             let summary = AgentCompanionSpeech.ending(label: key.hasPrefix("root|") ? nil : self.agentCompanions.labels[key], disconnected: !connected)
             pet.prepareAgentDeparture(summary: summary, deadline: deadline)
         }
-        agentCompanions.onResumed = { [weak self] key in self?.agentBoundPets[key]?.cancelAgentDeparture() }
+        agentCompanions.onResumed = { [weak self] key in
+            self?.agentBoundPets[key]?.cancelAgentDeparture()
+            if key.hasPrefix("root|dsh|") { self?.startDSHStatus(for: key, delay: 0) }
+        }
         agentCompanions.onClose = { [weak self] key in
             guard let self, let pet = self.agentBoundPets[key] else { return }
             pet.completeAgentDeparture { [weak self, weak pet] in
@@ -168,6 +198,14 @@ final class AppCoordinator: NSObject {
                                     y: area.minY + area.height * Double(index / 5 + 1) / 5)
                 spawnDesktopPet(at: point)
             }
+        } else if ProcessInfo.processInfo.arguments.contains("--show-information-window") {
+            showInformationWindow()
+        } else if ProcessInfo.processInfo.arguments.contains("--show-metric-settings") {
+            SystemMetricSettingsWindow.show()
+        } else if ProcessInfo.processInfo.arguments.contains("--show-information") || ProcessInfo.processInfo.arguments.contains("--show-network-options") {
+            menuBar.showComputerInformation()
+        } else if ProcessInfo.processInfo.arguments.contains("--show-network-diagnostics") {
+            NetworkDiagnosticsWindow.show()
         } else if ProcessInfo.processInfo.arguments.contains("--show-dashboard") {
             showDashboard()
         } else if ProcessInfo.processInfo.arguments.contains("--show-peek") {
@@ -178,7 +216,28 @@ final class AppCoordinator: NSObject {
         }
     }
 
+    private func showInformationWindow() {
+        let height = min(SystemMetricPreferences.shared.panelBaseHeight + AIMonitorStore.shared.sectionHeight, (NSScreen.main?.visibleFrame.height ?? 900) - 80)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 264, height: max(280, height)), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
+        window.title = "运行概览"; window.isReleasedWhenClosed = false
+        let view = ComputerInformationView(frame: window.contentView?.bounds ?? .zero, aiStore: .shared)
+        view.autoresizingMask = [.width, .height]; window.contentView = view
+        informationWindow = window; window.center(); window.makeKeyAndOrderFront(nil); NSApp.activate(ignoringOtherApps: true)
+        informationWindowTask = Task { [weak self, weak window, weak view] in
+            while !Task.isCancelled, let self, let window, window.isVisible, let view {
+                view.update(self.metricsSampler.sample())
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            }
+        }
+    }
+
     func stop() {
+        NetworkDiagnosticsWindow.stop()
+        NetworkAddressStore.shared.stop()
+        informationWindowTask?.cancel(); informationWindowTask = nil; informationWindow?.close()
+        completionTasks.values.forEach { $0.cancel() }; completionTasks.removeAll()
+        dshStatusTask?.cancel(); dshStatusTask = nil; dshStatusBegins.removeAll()
+        AIMonitorStore.shared.setDSHCompanionActive(false)
         AIMonitorStore.shared.stop()
         agentCompanions.closeAll()
         hideTask?.cancel()
@@ -256,10 +315,11 @@ final class AppCoordinator: NSObject {
     }
 
     @discardableResult
-    private func spawnDesktopPet(at point: CGPoint, agentManaged: Bool = false) -> RoamPanelController? {
+    private func spawnDesktopPet(at point: CGPoint, agentManaged: Bool = false, dshBalanceCompanion: Bool = false) -> RoamPanelController? {
         guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main else { return nil }
         var autonomy = PetView.AutonomyConfiguration()
         if agentManaged { autonomy.agentBirthDelay = 2 }
+        autonomy.dshBalanceCompanion = dshBalanceCompanion
         let pet = RoamPanelController(repository: repository, autonomy: autonomy)
         pet.interactionDelegate = self
         pet.onSelectSkin = { [weak self] in self?.menuBarDidSelectSkin($0) }
@@ -270,6 +330,30 @@ final class AppCoordinator: NSObject {
         desktopPets.append(pet)
         pet.show(centeredAt: point, screen: screen, scale: displayScale, clipID: "full.idle")
         return pet
+    }
+
+    private func startDSHStatus(for key: String, delay: TimeInterval = 2) {
+        dshStatusBegins[key] = Date().addingTimeInterval(delay)
+        AIMonitorStore.shared.setDSHCompanionActive(true)
+        guard dshStatusTask == nil else { return }
+        dshStatusTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                let active = self.agentBoundPets.filter { key, _ in
+                    key.hasPrefix("root|dsh|") && self.agentCompanions.roster.entries[key]?.dismissed == false
+                        && self.agentCompanions.roster.entries[key]?.retireAt == nil
+                }
+                guard !active.isEmpty else {
+                    AIMonitorStore.shared.setDSHCompanionActive(false)
+                    self.dshStatusBegins.removeAll(); self.dshStatusTask = nil; return
+                }
+                AIMonitorStore.shared.refreshDSHPriceIfNeeded()
+                for (key, pet) in active where Date() >= (self.dshStatusBegins[key] ?? .distantPast) {
+                    pet.setAgentStatus(AIMonitorStore.shared.dshCompanionText)
+                }
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            }
+        }
     }
 
     private func desktopPet(for view: PetView) -> RoamPanelController? {
@@ -350,7 +434,14 @@ final class AppCoordinator: NSObject {
             if result.disposition == .accepted {
                 AIMonitorStore.shared.recordActivity(event)
                 if let name = replyCompletions.ingest(event), !quietMode {
-                    menuBar.showReplyCompletion(sourceName: name)
+                    let id = UUID()
+                    completionTasks[id] = Task { [weak self] in
+                        let quota = await AIMonitorStore.shared.quotaForCompletion(event)
+                        guard let self else { return }
+                        defer { self.completionTasks.removeValue(forKey: id) }
+                        guard !Task.isCancelled, !self.quietMode else { return }
+                        self.menuBar.showReplyCompletion(sourceName: name, quotaSummary: quota)
+                    }
                 }
                 if AIMonitorStore.shared.preferences.autoAgentPets {
                     agentCompanions.receive(event)

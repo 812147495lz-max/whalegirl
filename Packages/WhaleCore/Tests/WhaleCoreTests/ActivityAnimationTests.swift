@@ -30,4 +30,45 @@ final class ActivityAnimationTests: XCTestCase {
         XCTAssertEqual(ActivityAnimation.framesPerSecond(cpuPercent: .nan), 15 - 25 * (30.0 / 74.0), accuracy: 0.001)
         XCTAssertEqual(ActivityAnimation.framesPerSecond(cpuPercent: -10), 15 - 25 * (30.0 / 74.0), accuracy: 0.001)
     }
+    func testClockUsesElapsedTimeAndSkipsLateFrames() {
+        var clock = ActivityAnimationClock(sequenceLength: 76, at: 0)
+        clock.updateCPU(25, at: 0)
+        XCTAssertEqual(clock.advance(to: 0.35), 5)
+        XCTAssertEqual(clock.delayUntilNextFrame(at: 0.35), 0.05, accuracy: 0.0001)
+        XCTAssertEqual(clock.advance(to: 10), 74) // 150 elapsed frames, modulo76; no slow catch-up loop.
+    }
+
+    func testSamplingDoesNotRestartPartialFrame() {
+        var clock = ActivityAnimationClock(sequenceLength: 76, at: 0)
+        clock.updateCPU(25, at: 0)
+        clock.updateCPU(25, at: 0.35)
+        XCTAssertEqual(clock.frameIndex, 5)
+        XCTAssertEqual(clock.delayUntilNextFrame(at: 0.35), 0.05, accuracy: 0.0001)
+        XCTAssertEqual(clock.advance(to: 0.41), 6)
+    }
+
+    func testCPUChangeRespondsWithinTwoSamplesAndKeepsPhase() {
+        var clock = ActivityAnimationClock(sequenceLength: 76, at: 0)
+        clock.updateCPU(25, at: 0)
+        clock.updateCPU(99, at: 1)
+        XCTAssertEqual(clock.frameIndex, 15)
+        XCTAssertGreaterThan(clock.framesPerSecond, 38)
+        clock.updateCPU(99, at: 2)
+        XCTAssertGreaterThan(clock.framesPerSecond, 43)
+        var high = ActivityAnimationClock(sequenceLength: 76, at: 0)
+        high.updateCPU(99, at: 0)
+        XCTAssertEqual(high.framesPerSecond, 45, accuracy: 0.001)
+    }
+
+    func testMissingCPUAndBackwardsTimeDoNotResetMotion() {
+        var clock = ActivityAnimationClock(sequenceLength: 76, at: 0)
+        clock.updateCPU(99, at: 0)
+        clock.updateCPU(nil, at: 1)
+        XCTAssertEqual(clock.frameIndex, 45)
+        XCTAssertEqual(clock.framesPerSecond, 45, accuracy: 0.001)
+        XCTAssertEqual(clock.advance(to: 0.5), 45)
+        XCTAssertEqual(clock.advance(to: .infinity), 45)
+        clock.updateCPU(.nan, at: 1)
+        XCTAssertEqual(clock.framesPerSecond, 45, accuracy: 0.001)
+    }
 }

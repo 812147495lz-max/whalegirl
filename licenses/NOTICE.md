@@ -61,3 +61,9 @@ AI quota backend: CodexBarCLI, MIT, Copyright (c) 2026 Peter Steinberger, pinned
 ## v1.0 publisher confirmation
 
 The publisher has confirmed permission to publicly distribute the additional artwork and user-provided animations included in v1.0. Artwork retains its own rights; the root MIT license covers the application code and does not replace independent asset licenses or permission requirements.
+
+DSH main-agent daily usage now follows MeteorNOX/DeepSeek-Balance-Whale-Widget v0.4.2, commit 5247dd6813d6e4430728f39ccc63d43cda046022 (MIT, Copyright (c) 2026 MeteorNOX). Original Python integration adapts its fixed-point observed-balance accounting and Beijing peak/holiday semantics. Full license is bundled in AIMonitor/Licenses/DeepSeek-Balance-Whale-Widget-MIT.txt. No upstream artwork, audio or browser plugin is bundled or installed. WhaleGirl's private observation book is independent of the plugin's books and never rewrites DSH data. Prior v1.3's token-cost-estimate approach is superseded.
+
+## v1.5 public distribution
+
+The publisher previously confirmed permission to publicly distribute the complete additional artwork and user-provided animations retained in this release. This does not relicense third-party artwork under MIT or grant unrestricted reuse; original credits and independent permission requirements remain.

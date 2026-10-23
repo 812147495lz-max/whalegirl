@@ -30,6 +30,7 @@ struct SystemMetricsSnapshot: Sendable {
 
 @MainActor
 final class SystemMetricsSampler {
+    private var cachedSample: (Date, SystemMetricsSnapshot)?
     private var previousCPUTicks: (busy: UInt64, total: UInt64)?
     private var previousNetwork: (date: Date, incoming: UInt64, outgoing: UInt64)?
 
@@ -39,6 +40,7 @@ final class SystemMetricsSampler {
     private var hardware = HardwareMetricsSnapshot.unavailable
 
     func sample(at date: Date = Date()) -> SystemMetricsSnapshot {
+        if let (previous, value) = cachedSample, (0..<0.8).contains(date.timeIntervalSince(previous)) { return value }
         refreshHardware(at: date)
         let cpu = sampleCPU()
         let memory = sampleMemory()
@@ -56,6 +58,7 @@ final class SystemMetricsSampler {
         snapshot.hardware = hardware.fetchedAt.map { date.timeIntervalSince($0) < 30 } == true ? hardware : .unavailable
         snapshot.batteryPresent = battery != nil
         snapshot.memoryReadingAvailable = memory.available
+        cachedSample = (date, snapshot)
         return snapshot
     }
 
@@ -188,9 +191,14 @@ final class SystemMetricPreferences {
     static let changed = Notification.Name("WhaleGirl.SystemMetricsChanged")
     private let defaults: UserDefaults
     private let key = "informationPanel.enabledMetrics.v1"
+    static let chartMetrics: [SystemMetric] = [.cpu, .gpu, .memory, .network, .battery, .temperature]
+    private(set) var chartEnabled: Set<SystemMetric>
+    private(set) var showAddresses: Bool
     private(set) var enabled: Set<SystemMetric>
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        chartEnabled = Set((defaults.stringArray(forKey: "informationPanel.charts.v1") ?? ["cpu", "network"]).compactMap(SystemMetric.init(rawValue:)))
+        showAddresses = defaults.object(forKey: "informationPanel.addresses.v1") as? Bool ?? true
         if let saved = defaults.stringArray(forKey: key) { enabled = Set(saved.compactMap(SystemMetric.init(rawValue:))) }
         else { enabled = Set(SystemMetric.allCases) }
     }
@@ -199,15 +207,41 @@ final class SystemMetricPreferences {
         save()
     }
     func setAll(_ value: Bool) { enabled = value ? Set(SystemMetric.allCases) : []; save() }
+    func setChart(_ metric: SystemMetric, enabled value: Bool) {
+        if value { chartEnabled.insert(metric); enabled.insert(metric) } else { chartEnabled.remove(metric) }
+        save()
+    }
+    func setShowAddresses(_ value: Bool) { showAddresses = value; save() }
     private func save() {
+        defaults.set(chartEnabled.map(\.rawValue).sorted(), forKey: "informationPanel.charts.v1")
+        defaults.set(showAddresses, forKey: "informationPanel.addresses.v1")
         defaults.set(enabled.map(\.rawValue).sorted(), forKey: key)
         NotificationCenter.default.post(name: Self.changed, object: self)
     }
     var panelBaseHeight: CGFloat {
-        let tiles = enabled.intersection([.cpu, .gpu, .memory, .storage]).count
-        return 102 + (enabled.contains(.model) ? 36 : 0) + CGFloat((tiles + 1) / 2) * 100
-            + (enabled.contains(.network) ? 38 : 0) + (enabled.contains(.battery) ? 24 : 0)
-            + (enabled.contains(.temperature) ? 50 : 0)
+        // Mirror actual arranged rows so a short card is not made scrollable by an underestimated height.
+        var heights: [CGFloat] = []
+        if enabled.contains(.model) { heights.append(12) }
+        for metric in [SystemMetric.cpu, .gpu, .memory, .storage] where enabled.contains(metric) {
+            heights.append(20 + (chartEnabled.contains(metric) && Self.chartMetrics.contains(metric) ? 36 : 0))
+        }
+        if enabled.contains(.network) {
+            heights.append(20)
+            if chartEnabled.contains(.network) { heights.append(36) }
+            if showAddresses {
+                let addresses = NetworkAddressStore.shared
+                let publicLines = addresses.publicAddressLines
+                heights.append(publicLines.map { NetworkAddressStore.informationRowHeight(for: $0) }.reduce(0, +) + CGFloat(max(0, publicLines.count - 1)) * 4 + (publicLines.first?.contains(":") == true ? 24 : 0))
+                let lines = addresses.internalAddressLines
+                heights.append(lines.map { NetworkAddressStore.informationRowHeight(for: $0) }.reduce(0, +) + CGFloat(max(0, lines.count - 1)) * 4 + (lines.first?.contains(":") == true ? 24 : 0))
+            }
+        }
+        for metric in [SystemMetric.battery, .temperature] where enabled.contains(metric) {
+            heights.append(20)
+            if chartEnabled.contains(metric) { heights.append(36) }
+        }
+        if enabled.isEmpty { heights.append(12) }
+        return 67 + heights.reduce(0, +) + CGFloat(max(0, heights.count - 1)) * 4
     }
 }
 

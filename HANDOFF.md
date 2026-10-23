@@ -1,24 +1,23 @@
-# whalegirl v1.0 public handoff
+# whalegirl v1.5 public handoff
 
-This is the first public snapshot of the current WhaleGirl implementation. Local development history, machine logs, account state, screenshots of private desktops, temporary workspaces and historical build packages are not part of the public repository.
+This release continues the public v1.0 history. It contains the current implementation, licensed runtime assets and integrations. Private development history, account state, local logs, desktop screenshots, caches and historical installers are excluded.
 
-## Source and runtime
+## Implementation
 
-- Swift 6, AppKit and Core Animation; testable pure logic in Packages/WhaleCore.
-- Presentation modes remain separate from mood. Sprite manifests keep schemaVersion1 and existing geometry/hitbox rules.
-- Runtime art, provenance, licenses, integration scripts and quota helper resources are included.
-- Current release limitations are stated in README.md and docs/releases/v1.0.md. Gemini desktop uses authorized Accessibility page reading; Grok Bot live quota remains unavailable. Credentials and raw conversations are not packaged.
+Swift 6/AppKit/Core Animation; pure logic in WhaleCore. Current updates cover compact consistent information UI, selectable trends, active network diagnostics, full IP addresses, optional hourly/weekly remaining-quota rings, reset/completion/recovery notices, the stationary DSH balance companion and monotonic CPU-driven tail timing. Existing user preferences remain separate from app bundles.
 
-## Validation
+DSH daily consumption is independently observed balance decreases, partitioned by credential hash/currency/Beijing day with fixed-point accounting; first observation establishes a baseline, credits are tracked separately, partial data is explicit. It is not a full invoice. The referenced widget's MIT code license is retained; no upstream widget art/audio/plugin is bundled. Actual provider access limitations remain truthful.
 
-The previous unchanged functional build passed native settings/quota rendering (2 tests) and quota/integration Core regressions (4 tests) on macOS26.6.2 arm64. This release changes the application version to1.0 and rebuilds from a clean publication directory. The public snapshot passed49 Core tests,16 Python tests, both Node fixtures,2 native UI tests, a Universal Release build, ZIP/signature checks and mounted-DMG validation. Exact checksums and limits are recorded in docs/releases/v1.0.md.
+## Validation and boundaries
 
-Native component tests, local event replay and fixtures do not establish every provider's real-model E2E behavior. Intel hardware, multimonitor transitions and high pet-count performance remain unverified.
+Recent focused checks:8 core animation timing tests and4 DSH observed-balance/calendar fixtures passed. Installed Apple silicon runtime was briefly measured for real image submission timing and actual quota text alignment was inspected in the same native information view. Version1.5 changes only release version/metadata and is rebuilt from this isolated public snapshot, with archive/signature/architecture checks. No broad suites, paid models, bandwidth or stress testing repeated for publication.
 
-## Rebuild
+No claim of full Intel-hardware, all-provider real-model, every theme/Spaces/multidisplay or many-pet/performance acceptance. Application image submission counts are not compositor/hardware FPS. See README and docs/releases/v1.5.md for final release results.
 
-Use the README xcodebuild and test commands. Original art licenses, source revisions and character credit must be preserved. No machine-specific absolute paths, accounts, credentials or raw prompts belong in future commits or logs.
+## Rebuild and rollback
 
-## Rollback
+Use README build commands; assets and helper resources are included. Preserve attribution, original license texts and permission boundaries. Publishing must not add personal paths, credentials, account records, raw conversations or local desktop captures.
 
-Quit the app and restore a previously retained installation or archive. User configuration and CSV live separately under Application Support; rollback should preserve those files.
+Rollback by quitting the app and installing a retained previous release. Preserve user configuration/CSV/observation data in Application Support. Do not replace unrelated private development history when updating this public repository.
+
+Final v1.5 publication build and archive checks passed: Universal Release, ZIP, readonly DMG, strict signatures, minmacOS14 and main/helper dual architectures. No developer home path in the bundle. SHA-256 values are in docs/releases/SHA256SUMS-v1.5.txt.

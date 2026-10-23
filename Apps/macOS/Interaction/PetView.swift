@@ -7,6 +7,7 @@ final class PetView: HitRegionView {
         var idleDelay: ClosedRange<Double> = 6...10
         var finishedPoseDelay: Double = 1
         var agentBirthDelay: Double? = nil
+        var dshBalanceCompanion = false
     }
 
     static let controlDockHeight: CGFloat = 0
@@ -49,6 +50,7 @@ final class PetView: HitRegionView {
     private var agentBirthTask: Task<Void, Never>?
     private var awaitingAgentBirth: Bool
     private var pendingAgentSpeech: String?
+    private var persistentAgentStatus: String?
 
     init(frame: NSRect, repository: SpriteRepository, autonomy: AutonomyConfiguration = .init()) {
         self.autonomy = autonomy
@@ -248,7 +250,18 @@ final class PetView: HitRegionView {
 
     private var randomActionCandidates: [String] {
         let idle = repository.resolvedClipID("full.idle")
-        return repository.communityActions.map(\.clipID).filter { $0 != idle }
+        let actions = repository.communityActions.filter {
+            !autonomy.dshBalanceCompanion || $0.category == "工作与表情" || $0.title.lowercased().replacingOccurrences(of: " ", with: "") == "偷吃token"
+        }
+        return actions.map(\.clipID).filter { $0 != idle }
+    }
+
+    private func preferredAgentAction(fallback: String?) -> String? {
+        if autonomy.dshBalanceCompanion, Double.random(in: 0..<1) < 0.35,
+           let token = repository.communityActions.first(where: { $0.title.lowercased().replacingOccurrences(of: " ", with: "") == "偷吃token" }) {
+            return token.clipID
+        }
+        return fallback
     }
 
     private func holdThenReturnToIdle() {
@@ -268,13 +281,13 @@ final class PetView: HitRegionView {
         guard !repository.communityActions.isEmpty, !isAnimationPaused,
               !isUserInteracting, !isWandering, !isEnvironmentSuppressed,
               isResting, animator.displayedClipID == currentClipID else { return }
-        let shouldWalk = randomActionsUntilWalk == 0 && onRequestWander != nil && !repository.walkingActions.isEmpty
+        let shouldWalk = !autonomy.dshBalanceCompanion && randomActionsUntilWalk == 0 && onRequestWander != nil && !repository.walkingActions.isEmpty
         if communityActionBag.isEmpty {
             communityActionBag = randomActionCandidates.shuffled()
         }
         randomActionTask?.cancel()
         repository.retainStationaryAction(displayedStationaryClipID, owner: self)
-        guard let preferred = shouldWalk ? repository.walkingActions.randomElement()?.clipID : communityActionBag.last else { return }
+        guard let preferred = shouldWalk ? repository.walkingActions.randomElement()?.clipID : preferredAgentAction(fallback: communityActionBag.last) else { return }
         // Reserve before decoding; never predecode a busy action and then discard it.
         guard let next = shouldWalk ? preferred : repository.claimStationaryAction(preferred,
             candidates: communityActionBag, owner: self) else { return }
@@ -385,6 +398,7 @@ final class PetView: HitRegionView {
         } else if isResting, !isAnimationPaused {
             scheduleRandomCommunityAction()
         }
+        if !suppressed { restorePersistentAgentStatus() }
     }
 
     func beginAgentLife(introduction: String) {
@@ -395,7 +409,7 @@ final class PetView: HitRegionView {
             do { try await Task.sleep(for: .seconds(self?.autonomy.agentBirthDelay ?? 2)) } catch { return }
             guard let self, !Task.isCancelled else { return }
             self.randomActionsUntilWalk = max(1, self.randomActionsUntilWalk)
-            guard let preferred = self.randomActionCandidates.randomElement(),
+            guard let preferred = self.preferredAgentAction(fallback: self.randomActionCandidates.randomElement()),
                   let first = self.repository.claimStationaryAction(preferred, candidates: self.randomActionCandidates.shuffled(), owner: self) else {
                 self.awaitingAgentBirth = false; self.scheduleRandomCommunityAction(); return
             }
@@ -490,6 +504,21 @@ final class PetView: HitRegionView {
         agentHalo?.removeAllAnimations(); agentHalo?.removeFromSuperlayer(); agentHalo = nil
     }
 
+    func setPersistentAgentStatus(_ line: String?) {
+        let old = persistentAgentStatus
+        persistentAgentStatus = line
+        guard let line else {
+            if bubbleLabel.string == old { bubbleTask?.cancel(); bubble.isHidden = true }
+            return
+        }
+        if old != line || bubble.isHidden { restorePersistentAgentStatus() }
+    }
+    private func restorePersistentAgentStatus() {
+        guard let line = persistentAgentStatus, !isEnvironmentSuppressed else { return }
+        bubbleTask?.cancel(); bubbleTask = nil
+        bubbleLabel.string = line; layoutBubble(); bubble.isHidden = false
+    }
+
     func sayThinking(_ line: String) {
         guard !isEnvironmentSuppressed, !isAnimationPaused, bubble.isHidden else { return }
         say(line)
@@ -505,13 +534,18 @@ final class PetView: HitRegionView {
         bubbleLabel.string = line
         layoutBubble()
         bubble.isHidden = false
-        let task = DispatchWorkItem { [weak self] in self?.bubble.isHidden = true }
+        let task = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            if self.persistentAgentStatus != nil { self.restorePersistentAgentStatus() }
+            else { self.bubble.isHidden = true }
+        }
         bubbleTask = task
         let duration = max(2.4, min(7, 1.2 + Double(line.count) * 0.18))
         DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
     }
 
     override func mouseEntered(with event: NSEvent) {
+        if persistentAgentStatus != nil { restorePersistentAgentStatus(); return }
         let candidates = DeepSeekChanDialog.lines.filter {
             $0 != lastHoverSpeechLine && $0 != Self.lastDesktopSpeechLine
         }
@@ -528,6 +562,7 @@ final class PetView: HitRegionView {
     }
 
     override func mouseExited(with event: NSEvent) {
+        if persistentAgentStatus != nil { restorePersistentAgentStatus(); return }
         bubble.isHidden = true
     }
 

@@ -491,7 +491,7 @@ private final class HoverCharacterPanel {
             background.autoresizingMask = [.width, .height]
             background.wantsLayer = true
             speechLabel.font = font
-            speechLabel.textColor = .labelColor
+            speechLabel.textColor = InformationPalette.ink
             speechLabel.alignment = .center
             speechLabel.lineBreakMode = .byWordWrapping
             speechLabel.maximumNumberOfLines = 0
@@ -549,14 +549,18 @@ final class MenuBarController: NSObject {
     private let repository: SpriteRepository
     private let metricsSampler: SystemMetricsSampler
     private var completionNames: [String] = []
+    private var completionQuotas: [String: String] = [:]
     private var completionDismissal: Task<Void, Never>?
     private var completionGeneration = UUID()
     private let completionHoldDuration: Duration
     private let peekSuppression: @MainActor (NSScreen) -> Bool
     var completionSpeechLine: String? { hoverCharacterPanel.currentSpeechLine }
     var completionSpeechPanel: NSPanel? { hoverCharacterPanel.currentSpeechPanel }
-    var isCompletionPeekActive: Bool { !completionNames.isEmpty }
-    private var completionLine: String { completionNames.joined(separator: "、") + " 回复完成啦" }
+    private var networkCompletionLine: String?
+    var isCompletionPeekActive: Bool { !completionNames.isEmpty || networkCompletionLine != nil }
+    private var completionLine: String {
+        networkCompletionLine ?? completionNames.map { name in name + " 回复完成啦" + (completionQuotas[name].map { "\n" + $0 } ?? "") }.joined(separator: "\n")
+    }
 
     private let informationController: MenuBarInformationController
     private let aiStore: AIMonitorStore?
@@ -589,7 +593,11 @@ final class MenuBarController: NSObject {
     private var shouldKeepPeekVisible: Bool { isPointerHovering || isPeekPinned || isCompletionPeekActive }
     private var lastHoverSpeechLine: String?
     private var pendingHoverSpeechLine: String?
-    private var smoothedCPUPercent: Double?
+    private var activityClock: ActivityAnimationClock?
+    // Opt-in, eight-line numeric timing probe; no account/event content and no default logging.
+    private var activityTraceStart: TimeInterval?
+    private var activityTraceFrames = 0
+    private var activityTraceSamples = 0
     private var heartEffects: [HeartEffect] = []
     private var currentScale = 1.0
     private weak var scaleValueLabel: NSTextField?
@@ -626,6 +634,7 @@ final class MenuBarController: NSObject {
         self.contextMenuPresenter = contextMenuPresenter
         informationController = MenuBarInformationController(aiStore: aiStore)
         super.init()
+        NetworkDiagnosticsStore.shared.onQuickCompletion = { [weak self] line in self?.showNetworkTestResult(line) }
         informationController.onClosed = { [weak self] in
             guard let self else { return }
             self.hidePeek(animated: false, preserveCompletion: true)
@@ -647,11 +656,26 @@ final class MenuBarController: NSObject {
         return window.convertToScreen(button.convert(button.bounds, to: nil))
     }
 
-    func showReplyCompletion(sourceName: String) {
+    func showQuotaRecovery(_ line: String) { showNetworkTestResult(line) }
+
+    func showNetworkTestResult(_ line: String) {
+        guard let screen = self.screen, !peekSuppression(screen) else { return }
+        if informationController.state == .showing { informationController.showNetworkResult(line); return }
+        guard !informationController.isActive else { return }
+        networkCompletionLine = line
+        suppressHoverUntilExit = false
+        if hoverAnimation == nil || hoverAnimation == .disappear { showHoverIfNeeded() }
+        else if hoverAnimation == .appear && hoverPlaybackTimer != nil { pendingHoverSpeechLine = line }
+        else { pendingHoverSpeechLine = nil; presentHoverSpeech(line) }
+    }
+
+    func showReplyCompletion(sourceName: String, quotaSummary: String? = nil) {
         guard statusItem != nil, let screen = self.screen ?? NSScreen.main ?? NSScreen.screens.first,
               !peekSuppression(screen) else { return }
+        networkCompletionLine = nil
         let name = String(sourceName.prefix(40)).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return }
+        if let quotaSummary { completionQuotas[name] = quotaSummary }
         if !completionNames.contains(name) {
             if completionNames.count >= 10 { completionNames.removeFirst() }
             completionNames.append(name)
@@ -700,7 +724,7 @@ final class MenuBarController: NSObject {
 
     private func cancelCompletionPeek() {
         completionDismissal?.cancel(); completionDismissal = nil
-        completionGeneration = UUID(); completionNames.removeAll()
+        completionGeneration = UUID(); completionNames.removeAll(); completionQuotas.removeAll(); networkCompletionLine = nil
     }
 
     var screen: NSScreen? { statusItem?.button?.window?.screen }
@@ -782,6 +806,7 @@ final class MenuBarController: NSObject {
         iconInputView = nil
         animationTimer?.invalidate()
         animationTimer = nil
+        activityClock = nil; activityTraceStart = nil
         frameLoadingTask?.cancel()
         frameLoadingTask = nil
         hoverPlaybackTimer?.invalidate()
@@ -838,6 +863,24 @@ final class MenuBarController: NSObject {
         handleStatusClick(event)
     }
 
+    func showComputerInformation() {
+        guard !informationController.isActive, let anchor = buttonFrameOnScreen, let screen = self.screen ?? NSScreen.main else { return }
+        cancelCompletionPeek()
+        suppressHoverUntilExit = true
+        hoverPlaybackTimer?.invalidate()
+        hoverPlaybackTimer = nil
+        winkTimer?.invalidate()
+        winkTimer = nil
+        if let frames = scaledHoverFrames[.appear], !frames.isEmpty {
+            hoverAnimation = .appear
+            hoverFramePosition = frames.count - 1
+            showHoverFrame(kind: .appear, index: hoverFramePosition)
+        }
+        let pose = hoverCharacterPanel.handoffPose()
+        hoverCharacterPanel.dismissSpeechBubble()
+        informationController.open(anchor: anchor, screen: screen, scale: currentScale, handoffPose: pose)
+    }
+
     func handleStatusClick(_ event: NSEvent) {
         if event.type == .otherMouseUp, event.buttonNumber == 2 {
             showContextMenu(event: event)
@@ -849,21 +892,7 @@ final class MenuBarController: NSObject {
             } else if informationController.isActive {
                 informationController.close()
             } else {
-                guard let anchor = buttonFrameOnScreen, let screen = self.screen ?? NSScreen.main else { return }
-                cancelCompletionPeek()
-                suppressHoverUntilExit = true
-                hoverPlaybackTimer?.invalidate()
-                hoverPlaybackTimer = nil
-                winkTimer?.invalidate()
-                winkTimer = nil
-                if let frames = scaledHoverFrames[.appear], !frames.isEmpty {
-                    hoverAnimation = .appear
-                    hoverFramePosition = frames.count - 1
-                    showHoverFrame(kind: .appear, index: hoverFramePosition)
-                }
-                let pose = hoverCharacterPanel.handoffPose()
-                hoverCharacterPanel.dismissSpeechBubble()
-                informationController.open(anchor: anchor, screen: screen, scale: currentScale, handoffPose: pose)
+                showComputerInformation()
             }
         } else if event.type == .leftMouseUp {
             guard !didDragCharacter else { return }
@@ -1032,6 +1061,7 @@ final class MenuBarController: NSObject {
         menu.addItem(item("拖出全身", action: #selector(showFull)))
         menu.addItem(item("一键关闭所有鲸鱼娘", action: #selector(closeAllCharacters)))
         menu.addItem(item("选择电脑信息…", action: #selector(showSystemMetricSettings)))
+        menu.addItem(item("网络诊断与测速…", action: #selector(showNetworkDiagnostics)))
         menu.addItem(item("编辑气泡文案 CSV", action: #selector(editSpeechCSV)))
         if let aiStore {
             let quota = item("显示 AI 额度", action: #selector(toggleAIQuotas))
@@ -1134,6 +1164,7 @@ final class MenuBarController: NSObject {
     @objc private func toggleAIQuotas() { if let aiStore { aiStore.setShowQuotas(!aiStore.preferences.showQuotas) } }
     @objc private func toggleAgentCompanions() { if let aiStore { aiStore.setAutoAgentPets(!aiStore.preferences.autoAgentPets) } }
     @objc private func showSystemMetricSettings() { SystemMetricSettingsWindow.show() }
+    @objc private func showNetworkDiagnostics() { NetworkDiagnosticsWindow.show() }
     @objc private func showAISettings() { aiStore?.showSettings() }
 
     @objc private func editSpeechCSV() {
@@ -1547,8 +1578,14 @@ final class MenuBarController: NSObject {
     }
 
     private func startActivityAnimation() {
+        animationTimer?.invalidate(); metricsTimer?.invalidate()
+        let now = ProcessInfo.processInfo.systemUptime
+        activityClock = ActivityAnimationClock(sequenceLength: frameSequence.count, at: now)
         sequencePosition = 0
         showCurrentActivityFrame()
+        if ProcessInfo.processInfo.arguments.contains("--trace-menu-animation") {
+            activityTraceStart = now; activityTraceFrames = 0; activityTraceSamples = 0
+        }
         _ = metricsSampler.sampleCPUUsage() // Establish the first CPU tick baseline.
         let timer = Timer(timeInterval: 1, target: self, selector: #selector(sampleActivity), userInfo: nil, repeats: true)
         metricsTimer = timer
@@ -1557,29 +1594,37 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func sampleActivity() {
-        guard let cpuPercent = metricsSampler.sampleCPUUsage() else { return }
-        if let previous = smoothedCPUPercent {
-            smoothedCPUPercent = previous * 0.65 + cpuPercent * 0.35
-        } else {
-            smoothedCPUPercent = cpuPercent
+        let snapshot = metricsSampler.sample()
+        SystemMetricsHistory.shared.record(snapshot, at: Date())
+        let now = ProcessInfo.processInfo.systemUptime
+        if let start = activityTraceStart, now > start {
+            let line = String(format: "menu-animation target=%.2f submitted=%.2f interval=%.3f\n", activityClock?.framesPerSecond ?? 0, Double(activityTraceFrames) / (now - start), now - start)
+            try? FileHandle.standardOutput.write(contentsOf: Data(line.utf8))
+            activityTraceSamples += 1; activityTraceFrames = 0
+            activityTraceStart = activityTraceSamples < 8 ? now : nil
         }
-        scheduleNextFrame()
+        activityClock?.updateCPU(snapshot.cpuPercent, at: now)
+        advanceActivityFrame()
     }
 
     private func scheduleNextFrame() {
-        guard !frameSequence.isEmpty else { return }
+        guard !frameSequence.isEmpty, activityClock != nil else { return }
         animationTimer?.invalidate()
-        // The target rate counts every displayed image, including synthesized midpoints.
-        let interval = ActivityAnimation.frameInterval(cpuPercent: smoothedCPUPercent)
+        // Compensate for time already spent drawing. Late callbacks advance to the
+        // real current phase instead of adding their own delay to every future frame.
+        let interval = activityClock!.delayUntilNextFrame(at: ProcessInfo.processInfo.systemUptime)
         let timer = Timer(timeInterval: interval, target: self, selector: #selector(advanceActivityFrame), userInfo: nil, repeats: false)
+        timer.tolerance = min(0.001, interval * 0.03)
         animationTimer = timer
         RunLoop.main.add(timer, forMode: .common)
     }
 
     @objc private func advanceActivityFrame() {
-        guard !frameSequence.isEmpty else { return }
-        sequencePosition = (sequencePosition + 1) % frameSequence.count
-        showCurrentActivityFrame()
+        guard !frameSequence.isEmpty, let position = activityClock?.advance(to: ProcessInfo.processInfo.systemUptime) else { return }
+        if sequencePosition != position {
+            sequencePosition = position
+            showCurrentActivityFrame()
+        }
         scheduleNextFrame()
     }
 
@@ -1588,6 +1633,7 @@ final class MenuBarController: NSObject {
         if frameSequence.indices.contains(sequencePosition) {
             let image = scaledActivityFrames[frameSequence[sequencePosition]]
             displayMenuBarImage(image)
+            if activityTraceStart != nil { activityTraceFrames += 1 }
         } else {
             let image = repository.firstFrameImage(clipID: "mini.idle", targetSize: NSSize(width: 24, height: 24))
             animationImageView?.image = image
@@ -1621,7 +1667,7 @@ final class HoverSpeechBubbleView: NSVisualEffectView {
         super.draw(dirtyRect)
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.addPath(Self.bubblePath(in: bounds.insetBy(dx: 0.5, dy: 0.5), tailX: tailX))
-        context.setFillColor(NSColor.windowBackgroundColor.withAlphaComponent(0.82).cgColor)
+        context.setFillColor(InformationPalette.surface.withAlphaComponent(0.94).cgColor)
         context.setStrokeColor(NSColor.separatorColor.cgColor)
         context.setLineWidth(1); context.drawPath(using: .fillStroke)
     }

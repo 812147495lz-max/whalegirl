@@ -9,3 +9,6 @@ Validated against installed DSH 0.2.0-rc.2 static source and upstream `deepseek-
 Rollback: restore the timestamped `cordis.patch.whalegirl-backup-*.yml` to `cordis.patch.yml`, then restart DSH. This removes only the observer registration.
 
 Version 5 tracks root working/step-start and successful/interrupted turn-end events. Running reconciliation sends heartbeats without reviving a completed turn. Main pets occasionally show generic thinking phrases; these are UI lines, not model reasoning. Routine root/child completion never sends a system notification. Root reply completion keeps the existing ten-second hanging peek. Child farewell stays on its own pet, followed by a 3.6-second halo/rise/curved feathered wipe. No dedicated entrance clip was identified in the existing catalog; entry is a short opacity transition.
+
+
+WhaleGirl v1.3.1 consumer UI: DSH root companions spawn at the lower-right visible desktop edge, remain stationary and show a persistent balance / independently observed daily balance decreases / pricing phase and time to the next actual change bubble. Classic autonomous actions use 工作与表情 and 偷吃Token. Existing observer v5 protocol is unchanged; no reinstall/restart is required for this app-only change. See docs/usage/DSH_BALANCE_COMPANION.md in the app source repository.

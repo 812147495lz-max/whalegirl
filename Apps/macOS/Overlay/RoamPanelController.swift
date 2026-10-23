@@ -33,6 +33,10 @@ final class RoamPanelController: OverlayPanelController {
             panel.animator().alphaValue = 1
         }
     }
+    func setAgentStatus(_ line: String?) {
+        guard line == nil || (!departureInProgress && ascentTask == nil) else { return }
+        petView?.setPersistentAgentStatus(line)
+    }
     func sayThinking(_ line: String) {
         guard !departureInProgress, ascentTask == nil, isVisible else { return }
         petView?.sayThinking(line)
@@ -54,6 +58,7 @@ final class RoamPanelController: OverlayPanelController {
         petView?.resumeAgentLife()
     }
     func prepareAgentDeparture(summary: String, deadline: Date) {
+        petView?.setPersistentAgentStatus(nil)
         agentDepartureTask?.cancel(); agentDepartureSafety?.cancel()
         departureGeneration = UUID(); let generation = departureGeneration
         departureClose = nil; departureInProgress = true
