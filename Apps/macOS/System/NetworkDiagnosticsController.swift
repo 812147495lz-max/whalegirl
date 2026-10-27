@@ -4,56 +4,19 @@ import Darwin
 import WhaleCore
 
 /// One owned child process, no shell, bounded output and wall time. All I/O runs off the main actor.
-final class NetworkDiagnosticProcess: @unchecked Sendable {
+final class NetworkDiagnosticProcess: Sendable {
     struct Result: Sendable { let output: String; let exitCode: Int32; let cancelled: Bool; let timedOut: Bool }
-    private let lock = NSLock()
-    private var process: Process?
-    private var cancelled = false
-    private var expired = false
-    func cancel() { stop(timeout: false) }
-    private func stop(timeout: Bool) {
-        lock.lock()
-        if timeout { expired = true } else { cancelled = true }
-        let process = process
-        lock.unlock()
-        guard let process, process.isRunning else { return }
-        process.terminate()
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1) {
-            if process.isRunning { _ = Darwin.kill(process.processIdentifier, SIGKILL) }
-        }
-    }
+    private let process = BoundedProcess()
+    func cancel() { process.cancel() }
     func run(executable: String, arguments: [String], timeout: TimeInterval,
              onLine: @escaping @Sendable (String) -> Void = { _ in }) throws -> Result {
-        let task = Process(), pipe = Pipe()
-        task.executableURL = URL(fileURLWithPath: executable); task.arguments = arguments
-        task.standardInput = FileHandle.nullDevice; task.standardOutput = pipe; task.standardError = pipe
+        var command = BoundedProcess.Command(URL(fileURLWithPath: executable), arguments, timeout: timeout, outputLimit: 262_144)
         var environment = ProcessInfo.processInfo.environment
-        environment["LC_ALL"] = "C"; environment["LANG"] = "C"; task.environment = environment
-        lock.lock()
-        if cancelled { lock.unlock(); throw CancellationError() }
-        process = task; lock.unlock()
-        try task.run()
-        lock.lock(); let alreadyCancelled = cancelled; lock.unlock()
-        if alreadyCancelled { stop(timeout: false) }
-        let watchdog = DispatchWorkItem { [weak self] in self?.stop(timeout: true) }
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout, execute: watchdog)
-        defer { watchdog.cancel(); try? pipe.fileHandleForReading.close() }
-        var output = Data(), pending = Data()
-        while true {
-            let data = pipe.fileHandleForReading.availableData
-            if data.isEmpty { break }
-            if output.count + data.count > 262_144 { stop(timeout: true); break }
-            output.append(data); pending.append(data)
-            while let newline = pending.firstIndex(of: 10) {
-                let line = String(decoding: pending[..<newline], as: UTF8.self)
-                pending.removeSubrange(...newline); onLine(line)
-            }
-        }
-        if !pending.isEmpty { onLine(String(decoding: pending, as: UTF8.self)) }
-        task.waitUntilExit()
-        lock.lock(); let result = Result(output: String(decoding: output, as: UTF8.self), exitCode: task.terminationStatus, cancelled: cancelled, timedOut: expired)
-        process = nil; lock.unlock()
-        return result
+        environment["LC_ALL"] = "C"; environment["LANG"] = "C"
+        command.environment = environment; command.mergeStandardError = true
+        let result = try process.run(command, onLine: onLine)
+        return Result(output: String(decoding: result.data, as: UTF8.self), exitCode: result.exitCode,
+                      cancelled: result.cancelled, timedOut: result.timedOut || result.overflow)
     }
 }
 

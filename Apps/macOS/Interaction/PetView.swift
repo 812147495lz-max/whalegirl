@@ -12,6 +12,16 @@ final class PetView: HitRegionView {
 
     static let controlDockHeight: CGFloat = 0
     static let minimumDockWidth: CGFloat = 1
+    static let balanceBubbleHeadroom: CGFloat = 144
+    static let minimumBubbleWidth: CGFloat = 268
+    /// The controller keeps this canvas independent of the larger speech window.
+    var artworkViewportSize: CGSize? { didSet { needsLayout = true } }
+    var onBubbleHeadroomChanged: ((CGFloat) -> Void)?
+    private(set) var isCharacterHovered = false
+    private enum BubbleKind { case balance, hover, dialogue, usage }
+    private var bubbleKind: BubbleKind = .dialogue
+    private var pendingUsageSpeech: String?
+    private var bubbleGeneration = UUID()
 
     var onContextMenu: ((NSEvent) -> Void)?
     var onRequestWander: (() -> Void)?
@@ -20,7 +30,7 @@ final class PetView: HitRegionView {
     private let spriteLayer = CALayer()
     private(set) var agentDepartureMask: CALayer?
     private(set) var agentHalo: CAShapeLayer?
-    private let bubble = NSView()
+    private let bubble = PetSpeechBubbleView()
     private let bubbleLabel = NSTextView(frame: .zero)
     private var lastHoverSpeechLine: String?
     private static var lastDesktopSpeechLine: String?
@@ -103,10 +113,6 @@ final class PetView: HitRegionView {
         bubbleLabel.textContainer?.heightTracksTextView = false
         bubble.identifier = NSUserInterfaceItemIdentifier("character.speech-bubble")
         bubble.wantsLayer = true
-        bubble.layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92).cgColor
-        bubble.layer?.cornerRadius = 9
-        bubble.layer?.borderWidth = 1
-        bubble.layer?.borderColor = NSColor.separatorColor.cgColor
         bubble.addSubview(bubbleLabel)
         bubble.isHidden = true
         addSubview(bubble)
@@ -125,8 +131,9 @@ final class PetView: HitRegionView {
 
     override func layout() {
         super.layout()
-        let artworkBounds = CGRect(x: 0, y: Self.controlDockHeight, width: bounds.width,
-                                   height: max(1, bounds.height - Self.controlDockHeight))
+        let viewport = artworkViewportSize ?? bounds.size
+        let artworkBounds = CGRect(x: (bounds.width - viewport.width) / 2, y: Self.controlDockHeight,
+                                   width: viewport.width, height: max(1, viewport.height - Self.controlDockHeight))
         let aspect = repository.canvasAspect(for: "\(currentVariant).idle")
         let artworkWidth = min(artworkBounds.width, artworkBounds.height * aspect)
         let artworkHeight = min(artworkBounds.height, artworkWidth / max(0.01, aspect))
@@ -149,27 +156,26 @@ final class PetView: HitRegionView {
     }
 
     private func layoutBubble() {
-        let font = bubbleLabel.font ?? .systemFont(ofSize: 11)
-        let maxWidth = max(24, min(240, bounds.width - 8))
-        let naturalWidth = ceil((bubbleLabel.string as NSString).size(withAttributes: [.font: font]).width)
-        let textWidth = max(1, min(naturalWidth + 2, maxWidth - 24))
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        paragraph.lineBreakMode = .byWordWrapping
-        // Measure with the same TextKit container that draws the text, including
-        // CJK fallback fonts. A separate NSString estimate can miss a wrapped row.
-        bubbleLabel.textStorage?.setAttributes([.font: font, .foregroundColor: NSColor.labelColor,
-                                               .paragraphStyle: paragraph],
-                                              range: NSRange(location: 0, length: (bubbleLabel.string as NSString).length))
-        guard let container = bubbleLabel.textContainer, let manager = bubbleLabel.layoutManager else { return }
-        container.containerSize = CGSize(width: textWidth, height: .greatestFiniteMagnitude)
-        manager.ensureLayout(for: container)
-        let textHeight = max(14, ceil(manager.usedRect(for: container).height)) + 2
-        let size = CGSize(width: textWidth + 24, height: textHeight + 12)
-        bubble.frame = CGRect(x: (bounds.width - size.width) / 2,
-                              y: max(2, bounds.height - size.height - 3),
-                              width: size.width, height: size.height)
-        bubbleLabel.frame = CGRect(x: 12, y: 6, width: textWidth, height: textHeight)
+        let thought = bubbleKind == .balance || bubbleKind == .usage
+        let size = bubble.arrange(bubbleLabel, balance: bubbleKind == .balance, thought: thought,
+                                  maximumWidth: max(40, min(260, bounds.width - 8)))
+        // The cropped sprite frame excludes the transparent animation canvas.
+        // Keep the smallest thought circle close to the top of the character.
+        let head = CGPoint(x: spriteLayer.frame.midX, y: spriteLayer.frame.maxY)
+        if thought {
+            let x = min(max(4, head.x - size.width / 2 - 12), max(4, bounds.width - size.width - 4))
+            bubble.frame = CGRect(x: x, y: head.y + 3, width: size.width, height: size.height)
+            bubble.thoughtHeadX = head.x - x
+        } else {
+            let y = artworkViewportSize.map { $0.height + 9 }
+                ?? max(2, bounds.height - size.height - 3)
+            bubble.frame = CGRect(x: (bounds.width - size.width) / 2, y: y,
+                                  width: size.width, height: size.height)
+        }
+        if let viewport = artworkViewportSize {
+            onBubbleHeadroomChanged?(max(Self.balanceBubbleHeadroom, bubble.frame.maxY - viewport.height + 6))
+        }
+        bubble.needsDisplay = true
     }
 
     func containsCharacter(at point: CGPoint) -> Bool {
@@ -392,13 +398,21 @@ final class PetView: HitRegionView {
             randomActionTask = nil
             repository.retainStationaryAction(displayedStationaryClipID, owner: self)
             if isWandering { finishAutonomousWalk() }
+            if bubbleKind == .usage, !bubble.isHidden {
+                pendingUsageSpeech = bubbleLabel.string
+                bubbleTask?.cancel(); bubbleTask = nil; bubbleGeneration = UUID()
+            }
+            isCharacterHovered = false
             bubble.isHidden = true
         } else if isHoldingFinishedAction, !isAnimationPaused {
             holdThenReturnToIdle()
         } else if isResting, !isAnimationPaused {
             scheduleRandomCommunityAction()
         }
-        if !suppressed { restorePersistentAgentStatus() }
+        if !suppressed {
+            if let line = pendingUsageSpeech { pendingUsageSpeech = nil; sayUsage(line) }
+            else { restorePersistentAgentStatus() }
+        }
     }
 
     func beginAgentLife(introduction: String) {
@@ -459,7 +473,8 @@ final class PetView: HitRegionView {
     /// The halo and character share the same curved, feathered pipe-mouth mask.
     func beginAngelDeparture(duration: Double, reducedMotion: Bool) -> CGFloat {
         cancelAngelDeparture()
-        bubbleTask?.cancel(); bubble.isHidden = true
+        bubbleTask?.cancel(); bubbleTask = nil; bubbleGeneration = UUID()
+        pendingUsageSpeech = nil; bubble.isHidden = true
         layoutSubtreeIfNeeded()
         let halo = CAShapeLayer()
         halo.name = "agent.departure.halo"
@@ -505,18 +520,29 @@ final class PetView: HitRegionView {
     }
 
     func setPersistentAgentStatus(_ line: String?) {
-        let old = persistentAgentStatus
         persistentAgentStatus = line
-        guard let line else {
-            if bubbleLabel.string == old { bubbleTask?.cancel(); bubble.isHidden = true }
+        if bubbleKind == .balance {
+            if line == nil { bubble.isHidden = true }
+            else { restorePersistentAgentStatus() }
+        } else if bubble.isHidden, bubbleTask == nil {
+            restorePersistentAgentStatus()
+        }
+    }
+    private func restorePersistentAgentStatus(animated: Bool = false) {
+        guard isCharacterHovered, let line = persistentAgentStatus, !isEnvironmentSuppressed else {
+            if bubbleKind == .balance { bubble.isHidden = true }
             return
         }
-        if old != line || bubble.isHidden { restorePersistentAgentStatus() }
-    }
-    private func restorePersistentAgentStatus() {
-        guard let line = persistentAgentStatus, !isEnvironmentSuppressed else { return }
-        bubbleTask?.cancel(); bubbleTask = nil
+        guard bubbleTask == nil else { return }
+        bubbleKind = .balance
         bubbleLabel.string = line; layoutBubble(); bubble.isHidden = false
+        bubble.layer?.removeAnimation(forKey: "hoverFloat")
+        if animated, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            let float = CABasicAnimation(keyPath: "transform.translation.y")
+            float.fromValue = -7; float.toValue = 0; float.duration = 0.22
+            float.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            bubble.layer?.add(float, forKey: "hoverFloat")
+        }
     }
 
     func sayThinking(_ line: String) {
@@ -529,41 +555,66 @@ final class PetView: HitRegionView {
     }
 
     func say(_ line: String) {
+        showSpeech(line, kind: .dialogue, duration: max(2.4, min(7, 1.2 + Double(line.count) * 0.18)))
+    }
+
+    /// Real usage reports stay readable without requiring pointer hover.
+    func sayUsage(_ line: String) {
+        guard !isEnvironmentSuppressed else { pendingUsageSpeech = line; return }
+        showSpeech(line, kind: .usage, duration: 8)
+    }
+
+    private func showSpeech(_ line: String, kind: BubbleKind, duration: Double) {
         guard !isEnvironmentSuppressed else { return }
         bubbleTask?.cancel()
+        let generation = UUID(); bubbleGeneration = generation
+        bubbleKind = kind
         bubbleLabel.string = line
         layoutBubble()
+        bubble.layer?.removeAnimation(forKey: "hoverFloat")
         bubble.isHidden = false
         let task = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            if self.persistentAgentStatus != nil { self.restorePersistentAgentStatus() }
-            else { self.bubble.isHidden = true }
+            guard let self, self.bubbleGeneration == generation else { return }
+            self.bubbleTask = nil
+            self.bubble.isHidden = true
+            self.restorePersistentAgentStatus()
         }
         bubbleTask = task
-        let duration = max(2.4, min(7, 1.2 + Double(line.count) * 0.18))
         DispatchQueue.main.asyncAfter(deadline: .now() + duration, execute: task)
     }
 
-    override func mouseEntered(with event: NSEvent) {
-        if persistentAgentStatus != nil { restorePersistentAgentStatus(); return }
-        let candidates = DeepSeekChanDialog.lines.filter {
-            $0 != lastHoverSpeechLine && $0 != Self.lastDesktopSpeechLine
-        }
-        let line = candidates.randomElement() ?? DeepSeekChanDialog.randomLine(excluding: lastHoverSpeechLine)
-        lastHoverSpeechLine = line
-        Self.lastDesktopSpeechLine = line
-        say(line)
-        if currentVariant == "full" { return }
-        let greetingClip = currentVariant == "peek" ? "peek.wave" : "full.happy"
-        play(greetingClip, looping: false) { [weak self] in
-            guard let self else { return }
-            self.play("\(self.currentVariant).idle")
+    /// Called by the shared pointer poll even while the transparent panel ignores
+    /// events. Rectangular tracking areas alone cannot describe the sprite alpha.
+    func updateCharacterHover(at point: CGPoint?) {
+        let hovered = !isEnvironmentSuppressed && point.map(containsCharacter(at:)) == true
+        guard hovered != isCharacterHovered else { return }
+        isCharacterHovered = hovered
+        if hovered {
+            guard bubbleTask == nil else { return }
+            if persistentAgentStatus != nil { restorePersistentAgentStatus(animated: true); return }
+            let candidates = DeepSeekChanDialog.lines.filter {
+                $0 != lastHoverSpeechLine && $0 != Self.lastDesktopSpeechLine
+            }
+            let line = candidates.randomElement() ?? DeepSeekChanDialog.randomLine(excluding: lastHoverSpeechLine)
+            lastHoverSpeechLine = line
+            Self.lastDesktopSpeechLine = line
+            showSpeech(line, kind: .hover, duration: max(2.4, min(7, 1.2 + Double(line.count) * 0.18)))
+            if currentVariant == "full" { return }
+            play("peek.wave", looping: false) { [weak self] in self?.play("peek.idle") }
+        } else if bubbleKind == .balance || bubbleKind == .hover {
+            if bubbleKind == .hover {
+                bubbleTask?.cancel(); bubbleTask = nil; bubbleGeneration = UUID()
+            }
+            bubble.isHidden = true
         }
     }
 
+    override func mouseEntered(with event: NSEvent) {
+        updateCharacterHover(at: convert(event.locationInWindow, from: nil))
+    }
+
     override func mouseExited(with event: NSEvent) {
-        if persistentAgentStatus != nil { restorePersistentAgentStatus(); return }
-        bubble.isHidden = true
+        updateCharacterHover(at: nil)
     }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -594,7 +645,7 @@ final class PetView: HitRegionView {
             return
         }
         let local = convert(event.locationInWindow, from: nil)
-        if local.y > bounds.height * 0.62 {
+        if local.y > spriteLayer.frame.minY + spriteLayer.frame.height * 0.62 {
             interactionDelegate?.petViewDidPetHead(self)
         } else {
             interactionDelegate?.petViewDidPokeFace(self)
@@ -604,5 +655,110 @@ final class PetView: HitRegionView {
     private func screenPoint(for event: NSEvent) -> CGPoint {
         guard let window else { return NSEvent.mouseLocation }
         return window.convertPoint(toScreen: event.locationInWindow)
+    }
+}
+
+
+/// Native thought bubble inspired by the reference widget's white body, blue ink
+/// and two small thought dots. Original geometry; no web code or artwork is bundled.
+@MainActor
+final class PetSpeechBubbleView: NSView {
+    private(set) var isBalance = false
+    private var isThought = false
+    var thoughtHeadX: CGFloat?
+    private let ink = NSColor(srgbRed: 0.23, green: 0.32, blue: 0.53, alpha: 1)
+
+    func arrange(_ text: NSTextView, balance: Bool, thought: Bool = false, maximumWidth: CGFloat) -> CGSize {
+        isBalance = balance
+        isThought = balance || thought
+        let inset: CGFloat = isThought && maximumWidth >= 180 ? 20 : 12
+        let tail: CGFloat = isThought ? 33 : 0
+        let vertical: CGFloat = isThought ? 9 : 6
+        let font = NSFont.systemFont(ofSize: 11, weight: .semibold)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineBreakMode = .byWordWrapping
+        paragraph.lineSpacing = isThought ? 2 : 0
+        let content = NSMutableAttributedString(string: text.string, attributes: [
+            .font: font, .foregroundColor: isThought ? ink : NSColor.labelColor,
+            .paragraphStyle: paragraph
+        ])
+        if balance {
+            let lines = text.string.components(separatedBy: "\n")
+            var location = 0
+            for (index, line) in lines.enumerated() {
+                let range = NSRange(location: location, length: (line as NSString).length)
+                content.addAttributes([
+                    .font: index == 0 ? NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+                        : NSFont.systemFont(ofSize: 10.5, weight: .medium),
+                    .foregroundColor: index < 2 ? ink : NSColor(srgbRed: 0.36, green: 0.43, blue: 0.61, alpha: 1)
+                ], range: range)
+                if index == 0, line.hasPrefix("余额 ") {
+                    content.addAttribute(.font, value: NSFont.systemFont(ofSize: 10.5, weight: .medium),
+                                         range: NSRange(location: 0, length: 3))
+                }
+                location += range.length + 1
+            }
+        }
+        text.textStorage?.setAttributedString(content)
+        let natural = ceil(content.size().width) + 2
+        let width = max(1, min(natural, maximumWidth - inset * 2))
+        guard let container = text.textContainer, let manager = text.layoutManager else { return .zero }
+        container.containerSize = CGSize(width: width, height: .greatestFiniteMagnitude)
+        manager.ensureLayout(for: container)
+        let height = max(14, ceil(manager.usedRect(for: container).height)) + 2
+        let size = CGSize(width: width + inset * 2, height: height + vertical * 2 + tail)
+        text.frame = CGRect(x: inset, y: vertical + tail, width: width, height: height)
+        needsDisplay = true
+        return size
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        if !isThought {
+            let shape = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 9, yRadius: 9)
+            NSColor.windowBackgroundColor.withAlphaComponent(0.92).setFill(); shape.fill()
+            NSColor.separatorColor.setStroke(); shape.lineWidth = 1; shape.stroke()
+            return
+        }
+        // A soft scalloped cloud, followed by three circles shrinking toward the head.
+        let body = CGRect(x: 4, y: 33, width: max(1, bounds.width - 8), height: max(1, bounds.height - 37))
+        let outline = NSBezierPath()
+        func point(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: body.minX + body.width * x, y: body.minY + body.height * y)
+        }
+        func curve(_ x: CGFloat, _ y: CGFloat, _ a: CGFloat, _ b: CGFloat, _ c: CGFloat, _ d: CGFloat) {
+            outline.curve(to: point(x, y), controlPoint1: point(a, b), controlPoint2: point(c, d))
+        }
+        outline.move(to: point(0.08, 0.22))
+        curve(0.04, 0.63, -0.03, 0.24, -0.02, 0.52)
+        curve(0.20, 0.94, 0.00, 0.88, 0.11, 1.02)
+        curve(0.44, 0.98, 0.24, 1.07, 0.38, 1.04)
+        curve(0.70, 0.98, 0.50, 1.07, 0.63, 1.07)
+        curve(0.94, 0.75, 0.85, 1.08, 1.00, 0.98)
+        curve(0.95, 0.30, 1.04, 0.68, 1.02, 0.42)
+        curve(0.77, 0.04, 1.00, 0.09, 0.88, -0.04)
+        curve(0.50, 0.04, 0.69, -0.06, 0.57, -0.02)
+        curve(0.24, 0.03, 0.42, -0.04, 0.30, -0.05)
+        curve(0.08, 0.22, 0.12, -0.03, 0.04, 0.07)
+        outline.close()
+        let fill = NSColor(srgbRed: 0.98, green: 0.99, blue: 1, alpha: 1)
+        let border = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast ? ink
+            : NSColor(srgbRed: 0.57, green: 0.67, blue: 0.85, alpha: 1)
+        NSGraphicsContext.saveGraphicsState()
+        let shadow = NSShadow()
+        shadow.shadowColor = NSColor(srgbRed: 0.32, green: 0.45, blue: 0.70, alpha: 0.16)
+        shadow.shadowBlurRadius = 3; shadow.shadowOffset = CGSize(width: 0, height: -1)
+        shadow.set()
+        fill.setFill(); outline.fill()
+        NSGraphicsContext.restoreGraphicsState()
+        border.setStroke(); outline.lineWidth = 1.35; outline.stroke()
+        let headX = min(max(20, thoughtHeadX ?? bounds.midX), bounds.width - 20)
+        for dot in [CGRect(x: headX - 18.5, y: 22, width: 11, height: 9),
+                    CGRect(x: headX - 9, y: 11, width: 7, height: 6),
+                    CGRect(x: headX - 2, y: 1, width: 4, height: 4)] {
+            let path = NSBezierPath(ovalIn: dot)
+            fill.setFill(); path.fill(); border.setStroke(); path.lineWidth = 1.15; path.stroke()
+        }
     }
 }

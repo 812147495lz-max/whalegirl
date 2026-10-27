@@ -41,6 +41,12 @@ final class RoamPanelController: OverlayPanelController {
         guard !departureInProgress, ascentTask == nil, isVisible else { return }
         petView?.sayThinking(line)
     }
+    @discardableResult
+    func sayUsage(_ line: String) -> Bool {
+        guard !departureInProgress, ascentTask == nil, isVisible, let petView else { return false }
+        petView.sayUsage(line)
+        return true
+    }
     func cancelAgentDeparture() {
         ascentTask?.cancel(); ascentTask = nil
         if let panel {
@@ -283,17 +289,18 @@ final class RoamPanelController: OverlayPanelController {
 
     func move(centeredAt point: CGPoint) {
         guard let panel, let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? panel.screen else { return }
-        panel.setFrame(DisplayGeometry.frameCentered(on: point, size: panel.frame.size, visibleFrame: screen.visibleFrame), display: true)
+        let artwork = petView?.artworkViewportSize ?? CGSize(width: panel.frame.width, height: panel.frame.height - balanceBubbleHeadroom)
+        resizeArtwork(to: artwork, centeredAt: point, screen: screen)
     }
 
     func resize(screen: NSScreen, scale: Double) {
         guard let panel else { return }
-        let center = CGPoint(x: panel.frame.midX, y: panel.frame.midY)
+        let center = CGPoint(x: panel.frame.midX, y: panel.frame.minY + (panel.frame.height - balanceBubbleHeadroom) / 2)
         let height = DisplayGeometry.fullHeight(screenFrame: screen.frame, userScale: scale)
         let aspect = repository.canvasAspect(for: "full.idle")
         let size = CGSize(width: max(height * aspect, PetView.minimumDockWidth),
                           height: height + PetView.controlDockHeight)
-        panel.setFrame(DisplayGeometry.frameCentered(on: center, size: size, visibleFrame: screen.visibleFrame), display: true)
+        resizeArtwork(to: size, centeredAt: center, screen: screen)
     }
 }
 

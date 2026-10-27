@@ -1,5 +1,6 @@
 import AppKit
 import QuartzCore
+import WhaleCore
 
 @MainActor
 class OverlayPanelController: NSObject {
@@ -19,11 +20,25 @@ class OverlayPanelController: NSObject {
         super.init()
     }
 
+    private(set) var balanceBubbleHeadroom: CGFloat = 0
+
     var isVisible: Bool { panel?.isVisible == true }
     var screen: NSScreen? { panel?.screen }
 
     func show(frame: CGRect, clipID: String) {
+        let artworkFrame = frame
+        balanceBubbleHeadroom = clipID.hasPrefix("full") || autonomy.dshBalanceCompanion ? PetView.balanceBubbleHeadroom : 0
+        var frame = frame
+        if balanceBubbleHeadroom > 0 {
+            frame.size.width = max(frame.width, PetView.minimumBubbleWidth)
+            frame.origin.x = artworkFrame.midX - frame.width / 2
+            frame.size.height += balanceBubbleHeadroom
+        }
+        if let screen = NSScreen.screens.first(where: { $0.frame.contains(CGPoint(x: frame.midX, y: frame.minY)) }) {
+            frame = WhaleCore.DisplayGeometry.clamp(frame, to: screen.visibleFrame)
+        }
         let panel = panel ?? makePanel(frame: frame)
+        petView?.artworkViewportSize = balanceBubbleHeadroom > 0 ? artworkFrame.size : nil
         panel.setFrame(frame, display: true)
         self.panel = panel
         shouldRemainVisible = true
@@ -37,10 +52,12 @@ class OverlayPanelController: NSObject {
     func refreshMouseAcceptance(at screenPoint: CGPoint) {
         guard let panel, let petView, panel.isVisible else { return }
         if !panel.frame.contains(screenPoint), !petView.isDraggingCharacter {
+            petView.updateCharacterHover(at: nil)
             if !panel.ignoresMouseEvents { panel.ignoresMouseEvents = true }
             return
         }
         let local = petView.convert(panel.convertPoint(fromScreen: screenPoint), from: nil)
+        petView.updateCharacterHover(at: local)
         let shouldIgnore = !(petView.isDraggingCharacter || petView.containsCharacter(at: local))
         if panel.ignoresMouseEvents != shouldIgnore { panel.ignoresMouseEvents = shouldIgnore }
     }
@@ -67,6 +84,7 @@ class OverlayPanelController: NSObject {
     func hide() {
         shouldRemainVisible = false
         DesktopOverlayCoordinator.shared.remove(self)
+        petView?.updateCharacterHover(at: nil)
         petView?.pauseAnimation()
         panel?.orderOut(nil)
         petView?.releaseStationaryAction()
@@ -79,6 +97,26 @@ class OverlayPanelController: NSObject {
     func say(_ line: String) { petView?.say(line) }
     func pauseAnimation() { petView?.pauseAnimation() }
     func resumeAnimation() { petView?.resumeAnimation() }
+
+    /// Resize the artwork canvas around its own center, excluding speech headroom.
+    func resizeArtwork(to size: CGSize, centeredAt center: CGPoint, screen: NSScreen) {
+        guard let panel else { return }
+        petView?.artworkViewportSize = size
+        let width = max(size.width, PetView.minimumBubbleWidth)
+        let frame = CGRect(x: center.x - width / 2, y: center.y - size.height / 2,
+                           width: width, height: size.height + balanceBubbleHeadroom)
+        panel.setFrame(WhaleCore.DisplayGeometry.clamp(frame, to: screen.visibleFrame), display: true)
+    }
+
+    private func reserveBubbleHeadroom(_ height: CGFloat) {
+        guard let panel, let artwork = petView?.artworkViewportSize,
+              abs(height - balanceBubbleHeadroom) > 0.5 else { return }
+        balanceBubbleHeadroom = height
+        var frame = panel.frame
+        frame.size.height = artwork.height + height
+        if let screen = panel.screen { frame = WhaleCore.DisplayGeometry.clamp(frame, to: screen.visibleFrame) }
+        panel.setFrame(frame, display: true)
+    }
 
     private func makePanel(frame: CGRect) -> PetPanel {
         let panel = PetPanel(
@@ -103,6 +141,7 @@ class OverlayPanelController: NSObject {
         let view = PetView(frame: CGRect(origin: .zero, size: frame.size), repository: repository, autonomy: autonomy)
         view.autoresizingMask = [.width, .height]
         view.interactionDelegate = interactionDelegate
+        view.onBubbleHeadroomChanged = { [weak self] height in self?.reserveBubbleHeadroom(height) }
         panel.contentView = view
         petView = view
         return panel

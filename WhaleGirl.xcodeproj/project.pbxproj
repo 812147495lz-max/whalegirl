@@ -48,6 +48,36 @@
 		B00000000000000000000060 /* NativeAppQuotaReader */ = {isa = PBXBuildFile; fileRef = F00000000000000000000060; };
 		B00000000000000000000061 /* NetworkDiagnosticsController */ = {isa = PBXBuildFile; fileRef = F00000000000000000000061; };
 		B00000000000000000000062 /* LiveMetrics */ = {isa = PBXBuildFile; fileRef = F00000000000000000000062; };
+		B00000000000000000000063 /* UsageReportStore.swift */ = {isa = PBXBuildFile; fileRef = F00000000000000000000063; };
+		B00000000000000000000064 /* UsageReportWindowController.swift */ = {isa = PBXBuildFile; fileRef = F00000000000000000000064; };
+		B00000000000000000000065 /* SoftwareUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000065 /* SoftwareUpdateController.swift */; };
+		B00000000000000000000066 /* SoftwareUpdateInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000066 /* SoftwareUpdateInstaller.swift */; };
+		B00000000000000000000070 /* ActivityFrameMorpher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000070; };
+		B00000000000000000000071 /* HoverCharacterPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000071; };
+		B00000000000000000000072 /* WhaleGirlAppTests+Agents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000072; };
+		B00000000000000000000073 /* WhaleGirlAppTests+Autonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000073; };
+		B00000000000000000000074 /* WhaleGirlAppTests+DesktopPets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000074; };
+		B00000000000000000000075 /* WhaleGirlAppTests+Dialogue.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000075; };
+		B00000000000000000000076 /* WhaleGirlAppTests+MenuInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000076; };
+		B00000000000000000000077 /* WhaleGirlAppTests+Network.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000077; };
+		B00000000000000000000078 /* WhaleGirlAppTests+QuotaAndMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000078; };
+		B00000000000000000000079 /* WhaleGirlAppTests+SpriteAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000079; };
+		B0000000000000000000007A /* MenuBarFramePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000007A; };
+		B0000000000000000000007B /* ComputerInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000007B; };
+		B00000000000000000000080 /* AppCoordinator+Preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000080; };
+		B00000000000000000000081 /* AppCoordinator+Lifecycle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000081; };
+		B00000000000000000000082 /* AppCoordinator+Agents.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000082; };
+		B00000000000000000000083 /* AppCoordinator+Usage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000083; };
+		B00000000000000000000084 /* AppCoordinator+DesktopPets.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000084; };
+		B00000000000000000000085 /* AppCoordinator+Interaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000085; };
+		B00000000000000000000086 /* AppCoordinator+Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000086; };
+		B00000000000000000000087 /* AppCoordinator+Events.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000087; };
+		B00000000000000000000088 /* AppCoordinator+MenuActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000088; };
+		B00000000000000000000089 /* MenuBarController+Speech.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000089; };
+		B0000000000000000000008A /* MenuBarController+HeartEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000008A; };
+		B0000000000000000000008B /* MenuBarController+Actions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000008B; };
+		B0000000000000000000008C /* MenuBarController+Hover.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000008C; };
+		B0000000000000000000008D /* MenuBarController+Animation.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000000000000000000008D; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -104,6 +134,36 @@
 		F00000000000000000000060 /* NativeAppQuotaReader */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/NativeAppQuotaReader.swift; sourceTree = SOURCE_ROOT; };
 		F00000000000000000000061 /* NetworkDiagnosticsController */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/NetworkDiagnosticsController.swift; sourceTree = SOURCE_ROOT; };
 		F00000000000000000000062 /* LiveMetrics */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/LiveMetrics.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000063 /* UsageReportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/UsageReportStore.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000064 /* UsageReportWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/Dashboard/UsageReportWindowController.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000065 /* SoftwareUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/SoftwareUpdateController.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000066 /* SoftwareUpdateInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Apps/macOS/System/SoftwareUpdateInstaller.swift; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000070 /* ActivityFrameMorpher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/ActivityFrameMorpher.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000071 /* HoverCharacterPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/HoverCharacterPanel.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000072 /* WhaleGirlAppTests+Agents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+Agents.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000073 /* WhaleGirlAppTests+Autonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+Autonomy.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000074 /* WhaleGirlAppTests+DesktopPets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+DesktopPets.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000075 /* WhaleGirlAppTests+Dialogue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+Dialogue.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000076 /* WhaleGirlAppTests+MenuInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+MenuInteraction.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000077 /* WhaleGirlAppTests+Network.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+Network.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000078 /* WhaleGirlAppTests+QuotaAndMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+QuotaAndMetrics.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000079 /* WhaleGirlAppTests+SpriteAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/WhaleGirlTests/WhaleGirlAppTests+SpriteAssets.swift"; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000007A /* MenuBarFramePipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/MenuBarFramePipeline.swift"; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000007B /* ComputerInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/ComputerInformationView.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000080 /* AppCoordinator+Preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Preferences.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000081 /* AppCoordinator+Lifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Lifecycle.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000082 /* AppCoordinator+Agents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Agents.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000083 /* AppCoordinator+Usage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Usage.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000084 /* AppCoordinator+DesktopPets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+DesktopPets.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000085 /* AppCoordinator+Interaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Interaction.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000086 /* AppCoordinator+Dashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Dashboard.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000087 /* AppCoordinator+Events.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+Events.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000088 /* AppCoordinator+MenuActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/App/Modules/AppCoordinator+MenuActions.swift"; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000089 /* MenuBarController+Speech.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/Modules/MenuBarController+Speech.swift"; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000008A /* MenuBarController+HeartEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/Modules/MenuBarController+HeartEffects.swift"; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000008B /* MenuBarController+Actions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/Modules/MenuBarController+Actions.swift"; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000008C /* MenuBarController+Hover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/Modules/MenuBarController+Hover.swift"; sourceTree = SOURCE_ROOT; };
+		F0000000000000000000008D /* MenuBarController+Animation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Apps/macOS/MenuBar/Modules/MenuBarController+Animation.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,7 +189,7 @@
 		};
 		G00000000000000000000002 /* App Sources */ = {
 			isa = PBXGroup;
-			children = (F00000000000000000000010, F00000000000000000000011, F00000000000000000000012, F00000000000000000000013, F00000000000000000000014, F00000000000000000000015, F00000000000000000000016, F00000000000000000000017, F00000000000000000000018, F00000000000000000000019, F0000000000000000000001A, F0000000000000000000001B, F0000000000000000000001C, F0000000000000000000001D, F0000000000000000000001E, F00000000000000000000031, F00000000000000000000032, F00000000000000000000052, F00000000000000000000054, F00000000000000000000056, F00000000000000000000057, F00000000000000000000058, F00000000000000000000060, F00000000000000000000061, F00000000000000000000062);
+			children = (F0000000000000000000008D, F0000000000000000000008C, F0000000000000000000008B, F0000000000000000000008A, F00000000000000000000089, F00000000000000000000088, F00000000000000000000087, F00000000000000000000086, F00000000000000000000085, F00000000000000000000084, F00000000000000000000083, F00000000000000000000082, F00000000000000000000081, F00000000000000000000080, F00000000000000000000010, F00000000000000000000011, F00000000000000000000012, F00000000000000000000013, F00000000000000000000014, F00000000000000000000015, F00000000000000000000016, F00000000000000000000017, F00000000000000000000018, F00000000000000000000019, F0000000000000000000001A, F0000000000000000000001B, F0000000000000000000001C, F0000000000000000000001D, F0000000000000000000001E, F00000000000000000000031, F00000000000000000000032, F00000000000000000000052, F00000000000000000000054, F00000000000000000000056, F00000000000000000000057, F00000000000000000000058, F00000000000000000000060, F00000000000000000000061, F00000000000000000000062, F00000000000000000000063, F00000000000000000000064, F00000000000000000000065, F00000000000000000000070, F00000000000000000000071, F0000000000000000000007A, F0000000000000000000007B, F00000000000000000000066);
 			name = "App Sources";
 			sourceTree = "<group>";
 		};
@@ -211,13 +271,13 @@
 		S00000000000000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (B00000000000000000000001, B00000000000000000000002, B00000000000000000000003, B00000000000000000000004, B00000000000000000000005, B00000000000000000000006, B00000000000000000000007, B00000000000000000000008, B00000000000000000000009, B0000000000000000000000A, B0000000000000000000000B, B0000000000000000000000C, B0000000000000000000000D, B0000000000000000000000E, B00000000000000000000010, B00000000000000000000011, B00000000000000000000052, B00000000000000000000054, B00000000000000000000056, B00000000000000000000057, B00000000000000000000058, B00000000000000000000060, B00000000000000000000061, B00000000000000000000062);
+			files = (B0000000000000000000008D, B0000000000000000000008C, B0000000000000000000008B, B0000000000000000000008A, B00000000000000000000089, B00000000000000000000088, B00000000000000000000087, B00000000000000000000086, B00000000000000000000085, B00000000000000000000084, B00000000000000000000083, B00000000000000000000082, B00000000000000000000081, B00000000000000000000080, B00000000000000000000001, B00000000000000000000002, B00000000000000000000003, B00000000000000000000004, B00000000000000000000005, B00000000000000000000006, B00000000000000000000007, B00000000000000000000008, B00000000000000000000009, B0000000000000000000000A, B0000000000000000000000B, B0000000000000000000000C, B0000000000000000000000D, B0000000000000000000000E, B00000000000000000000010, B00000000000000000000011, B00000000000000000000052, B00000000000000000000054, B00000000000000000000056, B00000000000000000000057, B00000000000000000000058, B00000000000000000000060, B00000000000000000000061, B00000000000000000000062, B00000000000000000000063, B00000000000000000000064, B00000000000000000000065, B00000000000000000000070, B00000000000000000000071, B0000000000000000000007A, B0000000000000000000007B, B00000000000000000000066);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		S00000000000000000000002 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (B00000000000000000000030,);
+			files = (B00000000000000000000072, B00000000000000000000073, B00000000000000000000074, B00000000000000000000075, B00000000000000000000076, B00000000000000000000077, B00000000000000000000078, B00000000000000000000079, B00000000000000000000030,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
