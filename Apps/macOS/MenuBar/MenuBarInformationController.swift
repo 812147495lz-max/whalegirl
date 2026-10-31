@@ -38,6 +38,7 @@ final class MenuBarInformationController {
     private var aiObservation: AIMonitorObservation?
     private var metricObservation: AIMonitorObservation?
     private var addressLayoutObservation: AIMonitorObservation?
+    private var spaceObservation: AIMonitorObservation?
     private let folder: URL?
     private let manifest: SpriteManifest?
     let alignment: Alignment?
@@ -84,6 +85,15 @@ final class MenuBarInformationController {
                 guard let self, self.isActive else { return }; self.layoutPanels()
             }
         })
+        // A transient menu presentation belongs to the Space where it was opened.
+        // Retire it on a switch, including any in-flight atlas load, so a later
+        // click cannot toggle a hidden presentation on the previous desktop.
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        spaceObservation = AIMonitorObservation(workspaceCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.shutdown() }
+        }, center: workspaceCenter)
         if let aiStore {
             aiObservation = AIMonitorObservation(NotificationCenter.default.addObserver(forName: AIMonitorStore.changed,
                 object: aiStore, queue: .main) { [weak self] _ in
@@ -106,7 +116,6 @@ final class MenuBarInformationController {
         closeAfterDescent = false
         hasRevealedInformation = false
         state = .loading
-        FullScreenAvoidance.shared.refreshIfNeeded(force: true)
         aiStore?.refresh()
         _ = sampler.sample() // Prime deltas without touching the existing menu CPU sampler.
         load("fall") { [weak self] clip, bitmap in
@@ -145,6 +154,13 @@ final class MenuBarInformationController {
         refreshTimer = nil
         characterPanel?.orderOut(nil)
         informationPanel?.orderOut(nil)
+        // Recreate on the next open. Reusing an ordered-out NSPanel also reuses
+        // its WindowServer Space membership, even when the display is unchanged.
+        characterPanel = nil
+        informationPanel = nil
+        informationView = nil
+        spriteLayer.removeFromSuperlayer()
+        handoffLayer.removeFromSuperlayer()
         spriteLayer.contents = nil
         handoffLayer.contents = nil
         handoffPose = nil
@@ -173,8 +189,10 @@ final class MenuBarInformationController {
         guard let targetScreen,
               NSScreen.screens.contains(where: { $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
                 == targetScreen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber }) else { return false }
-        FullScreenAvoidance.shared.refreshIfNeeded()
-        return !FullScreenAvoidance.shared.shouldSuppress(on: targetScreen)
+        // This card is explicitly requested by a menu click. Automatic pets and
+        // hover peeks still avoid fullscreen apps; this temporary panel may join
+        // the current fullscreen Space without activating or leaving that app.
+        return true
     }
 
     private func load(_ kind: String, completion: @escaping (SpriteManifest.Clip, Bitmap) -> Void) {
@@ -192,7 +210,6 @@ final class MenuBarInformationController {
             let bitmap = await Task.detached(priority: .userInitiated) {
                 Self.decode(url: url, width: atlas.pixelWidth, height: atlas.pixelHeight)
             }.value
-            await FullScreenAvoidance.shared.waitForInitialSnapshot()
             guard !Task.isCancelled, let self, self.generation == request else { return }
             self.loadingTask = nil
             guard let bitmap else {
@@ -225,7 +242,7 @@ final class MenuBarInformationController {
         panel.hasShadow = false
         panel.level = .statusBar
         panel.hidesOnDeactivate = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .fullScreenPrimary, .stationary, .ignoresCycle]
+        panel.collectionBehavior = [.moveToActiveSpace, .canJoinAllApplications, .transient, .fullScreenAuxiliary, .ignoresCycle]
         panel.ignoresMouseEvents = true
         panel.animationBehavior = .none
         return panel

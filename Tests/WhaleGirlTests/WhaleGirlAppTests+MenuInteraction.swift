@@ -255,6 +255,82 @@ extension WhaleGirlAppTests {
         XCTAssertFalse(menuBar.isHoverCharacterVisible, "Uninstall cancels cooldown wakeup")
     }
 
+    func testRopeInfoSpaceSwitchRetiresWindowsAndRecreatesOnNextOpen() async throws {
+        let screen = try XCTUnwrap(NSScreen.main)
+        let controller = MenuBarInformationController()
+        defer { controller.shutdown() }
+        let anchor = CGRect(x: screen.visibleFrame.maxX - 420, y: screen.visibleFrame.maxY, width: 40, height: 24)
+        func reveal() async throws {
+            controller.open(anchor: anchor, screen: screen, scale: 0.9)
+            try await waitForWanderingCondition(timeout: 15) { controller.state == .descending }
+            for _ in 0..<70 { controller.advanceAnimation() }
+            try await waitForWanderingCondition(timeout: 15) { controller.state == .showing }
+        }
+        try await reveal()
+        let firstCharacter = try XCTUnwrap(controller.characterPanel)
+        let firstCard = try XCTUnwrap(controller.informationPanel)
+        for panel in [firstCharacter, firstCard] {
+            XCTAssertTrue(panel.collectionBehavior.contains(.moveToActiveSpace))
+            XCTAssertTrue(panel.collectionBehavior.contains(.fullScreenAuxiliary))
+            XCTAssertTrue(panel.collectionBehavior.contains(.canJoinAllApplications))
+            XCTAssertFalse(panel.collectionBehavior.contains(.fullScreenNone))
+            XCTAssertFalse(panel.collectionBehavior.contains(.canJoinAllSpaces))
+            XCTAssertFalse(panel.collectionBehavior.contains(.stationary))
+            XCTAssertFalse(panel.collectionBehavior.contains(.fullScreenPrimary))
+        }
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        XCTAssertEqual(controller.state, .hidden)
+        XCTAssertFalse(firstCharacter.isVisible)
+        XCTAssertFalse(firstCard.isVisible)
+        XCTAssertNil(controller.characterPanel)
+        XCTAssertNil(controller.informationPanel)
+        XCTAssertNil(controller.informationView)
+        try await reveal()
+        XCTAssertFalse(controller.characterPanel === firstCharacter)
+        XCTAssertFalse(controller.informationPanel === firstCard)
+        XCTAssertTrue(controller.informationPanel?.isVisible == true)
+    }
+
+    func testRopeInfoSpaceSwitchCancelsLoadingWithoutLateWindows() async throws {
+        let screen = try XCTUnwrap(NSScreen.main)
+        let controller = MenuBarInformationController()
+        defer { controller.shutdown() }
+        let anchor = CGRect(x: screen.visibleFrame.maxX - 420, y: screen.visibleFrame.maxY, width: 40, height: 24)
+        controller.open(anchor: anchor, screen: screen, scale: 0.9)
+        XCTAssertEqual(controller.state, .loading)
+        NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
+        XCTAssertEqual(controller.state, .hidden)
+        try await Task.sleep(for: .milliseconds(350))
+        XCTAssertNil(controller.characterPanel)
+        XCTAssertNil(controller.informationPanel)
+        XCTAssertEqual(controller.state, .hidden)
+        controller.open(anchor: anchor, screen: screen, scale: 0.9)
+        try await waitForWanderingCondition(timeout: 15) { controller.state == .descending }
+        XCTAssertTrue(controller.characterPanel?.isVisible == true)
+    }
+
+    func testExplicitRopeInformationDoesNotDependOnAutomaticPeekPermission() async throws {
+        let repository = try SpriteRepository(bundle: .main)
+        let menuBar = MenuBarController(repository: repository, metricsSampler: .init(), peekSuppression: { _ in true })
+        defer { menuBar.uninstall() }
+        menuBar.install(scale: 0.9)
+        let hover = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero,
+            modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+            eventNumber: 0, trackingNumber: 0, userData: nil))
+        menuBar.mouseEntered(with: hover)
+        XCTAssertFalse(menuBar.isHoverCharacterVisible)
+        XCTAssertFalse(menuBar.isPeekPinned)
+        let click = try XCTUnwrap(NSEvent.mouseEvent(with: .rightMouseUp, location: .zero, modifierFlags: [],
+            timestamp: 0, windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        menuBar.handleStatusClick(click)
+        try await waitForWanderingCondition(timeout: 15) { menuBar.informationState == .showing }
+        let card = try XCTUnwrap(menuBar.informationController.informationPanel)
+        XCTAssertTrue(card.isVisible)
+        XCTAssertTrue(card.collectionBehavior.contains(.fullScreenAuxiliary))
+        XCTAssertTrue(card.collectionBehavior.contains(.moveToActiveSpace))
+        XCTAssertFalse(menuBar.isHoverCharacterVisible)
+    }
+
     func testRopeInfoGeometryStaysOnDisplayAndFormatsUnavailableMetrics() throws {
         let visible = CGRect(x: -1280, y: 50, width: 1280, height: 750)
         let alignment = try XCTUnwrap(MenuBarInformationController().alignment)
@@ -297,4 +373,65 @@ extension WhaleGirlAppTests {
         XCTAssertEqual(pointers, [.leftMouseDown, .leftMouseDragged, .leftMouseUp])
         XCTAssertEqual(clicks, [.leftMouseUp, .rightMouseUp, .otherMouseUp])
     }
+    func testStatusDragCanStartWhileInformationIsOpen() throws {
+        let coordinator = try AppCoordinator.make()
+        defer { coordinator.stop() }
+        let menu = coordinator.menuBar
+        menu.install(scale: 1)
+        let button = try XCTUnwrap(menu.statusItem?.button)
+        let window = try XCTUnwrap(button.window)
+        let anchor = try XCTUnwrap(menu.buttonFrameOnScreen)
+        let start = CGPoint(x: anchor.midX, y: anchor.midY)
+        func pointer(_ type: NSEvent.EventType, _ point: CGPoint) throws -> NSEvent {
+            try XCTUnwrap(NSEvent.mouseEvent(with: type, location: window.convertPoint(fromScreen: point),
+                modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+        }
+        menu.showComputerInformation()
+        XCTAssertNotEqual(menu.informationState, .hidden)
+        menu.trackIconDrag(try pointer(.leftMouseDown, start))
+        XCTAssertNotNil(menu.iconDragStart, "An open information card must not disable manual dragging")
+        let destination = CGPoint(x: start.x, y: start.y - 140)
+        menu.trackIconDrag(try pointer(.leftMouseDragged, destination))
+        XCTAssertEqual(coordinator.desktopPets.count, 1)
+        XCTAssertEqual(menu.informationState, .hidden)
+        menu.trackIconDrag(try pointer(.leftMouseUp, destination))
+        XCTAssertNil(coordinator.draggedMenuPet)
+        XCTAssertEqual(coordinator.desktopPets.count, 1, "Release must not create another pet")
+    }
+
+    func testStatusPointerSamplingDragsWithoutMouseDraggedAndCleansUp() throws {
+        let coordinator = try AppCoordinator.make()
+        defer { coordinator.stop() }
+        let menu = coordinator.menuBar
+        menu.install(scale: 1)
+        XCTAssertNotNil(menu.iconPointerTimer)
+        let anchor = try XCTUnwrap(menu.buttonFrameOnScreen)
+        let start = CGPoint(x: anchor.midX, y: anchor.midY)
+        // Holding a button elsewhere and then entering the icon must not start a pet.
+        menu.sampleIconPointer(at: start, leftButtonDown: true, mayBegin: false)
+        menu.sampleIconPointer(at: start, leftButtonDown: true, mayBegin: true)
+        XCTAssertNil(menu.iconDragStart)
+        menu.sampleIconPointer(at: start, leftButtonDown: false, mayBegin: false)
+        menu.sampleIconPointer(at: start, leftButtonDown: true, mayBegin: true)
+        XCTAssertNotNil(menu.iconDragStart)
+        menu.sampleIconPointer(at: CGPoint(x: start.x, y: start.y - 5), leftButtonDown: true, mayBegin: false)
+        XCTAssertTrue(coordinator.desktopPets.isEmpty, "Click jitter must not create a pet")
+        let destination = CGPoint(x: start.x, y: start.y - 160)
+        menu.sampleIconPointer(at: destination, leftButtonDown: true, mayBegin: false)
+        XCTAssertEqual(coordinator.desktopPets.count, 1)
+        menu.sampleIconPointer(at: destination, leftButtonDown: false, mayBegin: false)
+        XCTAssertNil(coordinator.draggedMenuPet)
+        XCTAssertNil(menu.iconDragStart)
+        XCTAssertEqual(coordinator.desktopPets.count, 1)
+        // A second real press starts a separate pet, without any mouseDragged event.
+        menu.sampleIconPointer(at: start, leftButtonDown: true, mayBegin: true)
+        menu.sampleIconPointer(at: destination, leftButtonDown: true, mayBegin: false)
+        menu.sampleIconPointer(at: destination, leftButtonDown: false, mayBegin: false)
+        XCTAssertEqual(coordinator.desktopPets.count, 2)
+        menu.uninstall()
+        XCTAssertNil(menu.iconPointerTimer)
+        XCTAssertNil(menu.iconDragStart)
+    }
+
 }

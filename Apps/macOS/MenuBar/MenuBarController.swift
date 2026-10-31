@@ -55,6 +55,10 @@ protocol MenuBarControllerDelegate: AnyObject {
 @MainActor
 final class MenuBarController: NSObject {
     var iconInputView: StatusIconInputView?
+    var iconPointerTimer: Timer?
+    var wasIconLeftDown = false
+    var pendingIconClick: NSEvent?
+    var suppressIconClickUntil: TimeInterval = 0
     var iconDragStart: CGPoint?
     var didDragCharacter = false
 
@@ -111,7 +115,9 @@ final class MenuBarController: NSObject {
     var hoverFramePosition = 0
     var isPointerHovering = false
     var isPeekPinned = false
-    var shouldKeepPeekVisible: Bool { isPointerHovering || isPeekPinned || isCompletionPeekActive }
+    var incomingMessageActive = false
+    let incomingBubble = MessageBubbleController()
+    var shouldKeepPeekVisible: Bool { isPointerHovering || isPeekPinned || isCompletionPeekActive || incomingMessageActive }
     var lastHoverSpeechLine: String?
     var pendingHoverSpeechLine: String?
     var activityClock: ActivityAnimationClock?
@@ -209,6 +215,12 @@ final class MenuBarController: NSObject {
         let input = StatusIconInputView(frame: button.bounds)
         input.autoresizingMask = [.width, .height]
         input.onPointerEvent = { [weak self] event in self?.trackIconDrag(event) }
+        wasIconLeftDown = NSEvent.pressedMouseButtons & 1 != 0
+        let pointerTimer = Timer(timeInterval: 1.0 / 60, target: self,
+                                 selector: #selector(pollIconPointer), userInfo: nil, repeats: true)
+        pointerTimer.tolerance = 0.004
+        iconPointerTimer = pointerTimer
+        RunLoop.main.add(pointerTimer, forMode: .common)
         input.onClick = { [weak self] event in self?.handleStatusClick(event) }
         input.onEntered = { [weak self] event in self?.mouseEntered(with: event) }
         input.onExited = { [weak self] event in self?.mouseExited(with: event) }
@@ -221,30 +233,8 @@ final class MenuBarController: NSObject {
         trackingArea = area
     }
 
-    func trackIconDrag(_ event: NSEvent) {
-        let point = event.window?.convertPoint(toScreen: event.locationInWindow) ?? NSEvent.mouseLocation
-        switch event.type {
-        case .leftMouseDown:
-            didDragCharacter = false
-            iconDragStart = !informationController.isActive && buttonFrameOnScreen?.contains(point) == true ? point : nil
-        case .leftMouseDragged:
-            guard let start = iconDragStart else { return }
-            guard didDragCharacter || start.y - point.y >= 12 else { return }
-            let isNew = !didDragCharacter
-            didDragCharacter = true
-            if isNew { hidePeek(animated: false) }
-            delegate?.menuBarDidDragCharacter(to: point, isNew: isNew)
-        case .leftMouseUp:
-            if didDragCharacter {
-                delegate?.menuBarDidDragCharacter(to: point, isNew: false)
-                delegate?.menuBarDidFinishDraggingCharacter()
-            }
-            iconDragStart = nil
-        default: break
-        }
-    }
-
     func uninstall() {
+        incomingBubble.finish(.cancelled)
         cancelCompletionPeek()
         informationController.shutdown()
         hoverCooldownTask?.cancel()
@@ -252,6 +242,13 @@ final class MenuBarController: NSObject {
         hoverCooldownUntil = 0
         isPointerHovering = false
         suppressHoverUntilExit = false
+        iconPointerTimer?.invalidate()
+        iconPointerTimer = nil
+        pendingIconClick = nil
+        wasIconLeftDown = false
+        suppressIconClickUntil = 0
+        iconDragStart = nil
+        didDragCharacter = false
         iconInputView?.removeFromSuperview()
         iconInputView = nil
         animationTimer?.invalidate()
@@ -315,6 +312,7 @@ final class MenuBarController: NSObject {
 
     func showComputerInformation() {
         guard !informationController.isActive, let anchor = buttonFrameOnScreen, let screen = self.screen ?? NSScreen.main else { return }
+        incomingBubble.finish(.dismissed)
         cancelCompletionPeek()
         suppressHoverUntilExit = true
         hoverPlaybackTimer?.invalidate()
@@ -345,7 +343,7 @@ final class MenuBarController: NSObject {
                 showComputerInformation()
             }
         } else if event.type == .leftMouseUp {
-            guard !didDragCharacter else { return }
+            guard shouldHandleIconLeftClick(event) else { return }
             if informationController.isActive { showContextMenu(event: event) }
             else { showHeartAboveStatusItem() }
         }

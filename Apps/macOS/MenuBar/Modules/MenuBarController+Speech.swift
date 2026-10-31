@@ -11,6 +11,7 @@ extension MenuBarController {
         if informationController.state == .showing { informationController.showNetworkResult(line); return }
         guard !informationController.isActive else { return }
         networkCompletionLine = line
+        guard !incomingMessageActive else { return }
         suppressHoverUntilExit = false
         if hoverAnimation == nil || hoverAnimation == .disappear { showHoverIfNeeded() }
         else if hoverAnimation == .appear && hoverPlaybackTimer != nil { pendingHoverSpeechLine = line }
@@ -28,6 +29,7 @@ extension MenuBarController {
             if completionNames.count >= 10 { completionNames.removeFirst() }
             completionNames.append(name)
         }
+        guard !incomingMessageActive else { return }
         // Defer while the user is reading the rope information panel; never overlay two characters.
         guard !informationController.isActive else { return }
         suppressHoverUntilExit = false
@@ -42,6 +44,7 @@ extension MenuBarController {
     }
 
     func presentHoverSpeech(_ line: String) {
+        guard !incomingMessageActive else { return }
         hoverCharacterPanel.showSpeechBubble(line, autoDismiss: !isCompletionPeekActive)
         guard isCompletionPeekActive else { return }
         completionDismissal?.cancel()

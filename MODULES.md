@@ -23,6 +23,7 @@
 |要改什么|对应模块|直接依赖/约束|
 |---|---|---|
 |右键菜单、功能入口、菜单内缩放控件|MenuBarController+Actions.swift|原有各功能服务|
+|菜单栏左键拖出、按键状态与释放|MenuBarController+Dragging.swift|应用图标范围内开始；不依赖mouseDragged，不注册全局事件监听|
 |悬停、探头、眨眼、冷却、手动展开|MenuBarController+Hover.swift|HoverCharacterPanel、MenuBarInformationController|
 |完成提醒、网络结果和探头气泡调度|MenuBarController+Speech.swift|HoverCharacterPanel；保持Token不主动探头|
 |菜单点击爱心特效|MenuBarController+HeartEffects.swift|CoreAnimation；和余额气泡无关|
@@ -41,4 +42,8 @@
 
 新增功能优先放入对应模块，主入口仅补充必要的初始化/路由。新增Swift文件必须同时加入Xcode文件引用和app Sources，否则不会编译。扩展跨文件用应用target内的internal访问，不能升级为public或复制状态绕开依赖。需要真正独立生命周期/复用时再提取独立类型或Swift Package，避免只为拆分而增加加载器。
 
-测试先按`Tests/WhaleGirlTests/WhaleGirlAppTests+主题.swift`选择相关项，WhaleCore逻辑用对应包测试。不要为排版移动增加镜像实现测试，也不要删除已有断言。模块化不代表全量功能已端到端验收；验证范围见`docs/releases/v2.0.0-validation.md`。
+测试先按`Tests/WhaleGirlTests/WhaleGirlAppTests+主题.swift`选择相关项，WhaleCore逻辑用对应包测试。不要为排版移动增加镜像实现测试，也不要删除已有断言。模块化不代表全量功能已端到端验收；已知补帧断言基线失败见`docs/maintenance/refactor-2026-10-27.md`。
+
+## 外部消息与双向对话
+
+接入说明：`docs/usage/MESSAGE_API.md`。HTTP传输/认证：`API/MessageHTTPServer.swift`；路由/上传：`API/MessageAPIService.swift`；设置/队列/生命周期：`API/MessageInboxController.swift`；持久化会话与发件箱：`API/MessageConversationStore.swift`；设置/主动发送界面：`API/MessageAPISettingsWindow.swift`、`API/MessageConversationWindow.swift`（以上相对Apps/macOS）。气泡/媒体播放：`MenuBar/MessageBubbleController.swift`；探头调度：`MenuBar/Modules/MenuBarController+IncomingMessages.swift`；主入口连线：`App/Modules/AppCoordinator+MessageAPI.swift`。协议纯逻辑在WhaleCore的`MessageAPI.swift`/`MessageHTTP.swift`，外部客户端在`Scripts/send_whale_message.py`。密钥和真实对话只存在用户数据目录，不复制进源码。

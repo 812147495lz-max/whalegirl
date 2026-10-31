@@ -3,8 +3,12 @@ import WhaleCore
 
 final class AIMonitorObservation: @unchecked Sendable {
     let token: NSObjectProtocol
-    init(_ token: NSObjectProtocol) { self.token = token }
-    deinit { NotificationCenter.default.removeObserver(token) }
+    private let center: NotificationCenter
+    init(_ token: NSObjectProtocol, center: NotificationCenter = .default) {
+        self.token = token
+        self.center = center
+    }
+    deinit { center.removeObserver(token) }
 }
 
 @MainActor

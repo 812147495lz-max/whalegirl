@@ -16,6 +16,7 @@ extension MenuBarController {
     }
 
     func hidePeek(animated: Bool = true, preserveCompletion: Bool = false) {
+        if !preserveCompletion { incomingBubble.finish(.dismissed) }
         if !preserveCompletion { cancelCompletionPeek() }
         isPeekPinned = false
         winkTimer?.invalidate()

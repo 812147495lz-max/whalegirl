@@ -123,7 +123,8 @@ extension WhaleGirlAppTests {
         XCTAssertEqual(repository.clip("peek.idle")?.id, "peek.idle")
     }
 
-    func testCoordinatorCreatesMovesAndClosesMultipleCharacters() throws {
+    func testCoordinatorCreatesMovesAndClosesMultipleCharacters() async throws {
+        await FullScreenAvoidance.shared.waitForInitialSnapshot()
         let coordinator = try AppCoordinator.make()
         defer { coordinator.stop() }
         let screen = try XCTUnwrap(NSScreen.main)

@@ -14,6 +14,8 @@ extension MenuBarController {
         menu.addItem(item("选择电脑信息…", action: #selector(showSystemMetricSettings)))
         menu.addItem(item("网络诊断与测速…", action: #selector(showNetworkDiagnostics)))
         menu.addItem(item("Token 用量与费用报表…", action: #selector(showUsageReport)))
+        menu.addItem(item("消息与对话…", action: #selector(showMessageConversations)))
+        menu.addItem(item("消息 API 设置…", action: #selector(showMessageAPISettings)))
         menu.addItem(item("编辑气泡文案 CSV", action: #selector(editSpeechCSV)))
         if let aiStore {
             let quota = item("显示 AI 额度", action: #selector(toggleAIQuotas))
@@ -121,6 +123,8 @@ extension MenuBarController {
     @objc func toggleAIQuotas() { if let aiStore { aiStore.setShowQuotas(!aiStore.preferences.showQuotas) } }
     @objc func toggleAgentCompanions() { if let aiStore { aiStore.setAutoAgentPets(!aiStore.preferences.autoAgentPets) } }
     @objc func showSystemMetricSettings() { SystemMetricSettingsWindow.show() }
+    @objc func showMessageConversations() { MessageInboxController.shared.showConversations() }
+    @objc func showMessageAPISettings() { MessageInboxController.shared.showSettings() }
     @objc func showUsageReport() { UsageReportStore.shared.showReport() }
 
     @objc func showNetworkDiagnostics() { NetworkDiagnosticsWindow.show() }

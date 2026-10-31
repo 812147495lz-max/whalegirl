@@ -11,6 +11,7 @@ extension AppCoordinator {
         }
         UsageReportStore.shared.start()
         menuBar.install(scale: userScale)
+        startMessageAPI()
         SoftwareUpdateController.shared.start()
         if ProcessInfo.processInfo.arguments.contains("--show-software-update") {
             SoftwareUpdateController.shared.showAndCheck()
@@ -69,6 +70,7 @@ extension AppCoordinator {
     }
 
     func stop() {
+        MessageInboxController.shared.stop()
         SoftwareUpdateController.shared.stop()
         usageAnnouncementTask?.cancel(); usageAnnouncementTask = nil
         usageAnnouncements.removeAll()

@@ -1,7 +1,7 @@
-# WhaleGirl 2.0.0
+# WhaleGirl 2.1.3
 
-功能与安装见README.md；维护按MODULES.md定位功能文件，测试按相关主题选择。应用入口为WhaleGirlMain → AppDelegate → AppCoordinator，运行数据不随源码分发。
+功能与安装见README.md；消息接入见docs/usage/MESSAGE_API.md。维护先按MODULES.md定位文件，主入口只连接模块。运行数据、接入密钥和真实对话不随源码分发。
 
-本版基于当前完整源码与既有资源，保留全部来源、许可及素材授权声明。使用源码构建需要支持Swift6的Xcode。发布构建、校验和定向测试记录见docs/releases/v2.0.0-validation.md；测试通过不等于全部端到端验收。
+本版新增消息接收、媒体气泡、文字回复及主动发送、外置设置；修复信息栏的桌面归属及菜单栏拖出。使用源码构建需要支持Swift6的Xcode，素材来源及许可保留。
 
-公开纠错使用后续提交/版本，不覆盖已有正式标签。用户数据独立保存，更新不重置；历史版本可从Releases获取。
+构建、定向验证和限制见docs/releases/v2.1.3-validation.md。测试通过不等于全部端到端验收。用户数据独立保存，更新不重置；正式标签不覆盖，后续更正使用新提交/版本。
